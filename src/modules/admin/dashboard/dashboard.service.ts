@@ -890,6 +890,7 @@ export class DashboardService {
                 status: true,
                 id_card_front: true,
                 id_card_back: true,
+                resume: true,
               },
             },
           },
@@ -950,6 +951,7 @@ export class DashboardService {
               status: true,
               id_card_front: true,
               id_card_back: true,
+              resume: true,
             },
           },
         },
@@ -990,6 +992,13 @@ export class DashboardService {
               appConfig().storageUrl.maidverification +
                 '/' +
                 verification.id_card_back,
+            )
+          : null,
+        resume_url: verification.resume
+          ? TanvirStorage.url(
+              appConfig().storageUrl.maidResume +
+                '/' +
+                verification.resume,
             )
           : null,
       };
