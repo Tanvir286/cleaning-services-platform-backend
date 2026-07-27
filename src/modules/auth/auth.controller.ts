@@ -366,6 +366,7 @@ export class AuthController {
       [
         { name: 'front_page', maxCount: 1 },
         { name: 'back_page', maxCount: 1 },
+        { name: 'resume', maxCount: 1 },
       ],
       {
         storage: memoryStorage(),
@@ -381,17 +382,19 @@ export class AuthController {
     files: {
       front_page?: Express.Multer.File[];
       back_page?: Express.Multer.File[];
+      resume?: Express.Multer.File[];
     },
   ) {
     try {
       const user_id = req.user.userId;
       const frontPageImage = files?.front_page ? files.front_page[0] : null;
       const backImage = files?.back_page ? files.back_page[0] : null;
-
+      const resume = files?.resume ? files.resume[0] : null;
       const response = await this.authService.submitVerification(
         user_id,
         frontPageImage,
         backImage,
+        resume,
       );
 
       return response;
@@ -428,72 +431,7 @@ export class AuthController {
   // topic: resume upload start ------------------>
   -----------------------------------------------*/
   
-  // upload resume
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.MAID)
-  @Post('maid/resume')
-  @UseInterceptors(
-    FileFieldsInterceptor(
-      [
-        { name: 'resume', maxCount: 1 },
-      ],
-      {
-        storage: memoryStorage(),
-        limits: {
-          fileSize: 5 * 1024 * 1024,
-        },
-      },
-    ),
-  )
-  async uploadResume(
-    @Req() req: Request,
-    @UploadedFiles()
-    files: {
-      resume?: Express.Multer.File[];
-    },
-  ) {
-    try {
-      const user_id = req.user.userId;
-      const resume = files?.resume ? files.resume[0] : null;
-      console.log(user_id,resume)
-      const response = await this.authService.uploadResume(user_id, resume);
-      return response;
-    } catch (error: any) {
-      return {
-        success: false,
-        message: 'Failed to upload resume',
-      };
-    }
-  }
-
-  
-  // get resume
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.MAID)
-  @Get('maid/resume')
-  async getResume(@Req() req: Request) {
-    try {
-      const user_id = req.user.userId;
-      const response = await this.authService.getResume(user_id);
-      return response;
-    } catch (error: any) {
-      return {
-        success: false,
-        message: 'Failed to get resume',
-      };
-    }
-  }
-
-
-
-
-
-
-
-
-
-
-
+ 
   //-----------------------------------------------(end)----------------------------------------------------------------------
 
   @ApiOperation({ summary: 'Refresh token' })
