@@ -43,7 +43,7 @@ export class AuthService {
     return TanvirStorage.url(appConfig().storageUrl.avatar + '/' + avatar);
   }
 
-  // done
+  // me
   async me(userId: string) {
     try {
       const user = await this.prisma.user.findFirst({
@@ -90,8 +90,7 @@ export class AuthService {
     }
   }
 
-  
-  // done
+  // register
   async register({
     first_name,
     last_name,
@@ -191,7 +190,8 @@ export class AuthService {
       };
     }
   }
-  // done
+  
+  // login
   async login({ 
     email,
     userId,
@@ -242,6 +242,7 @@ export class AuthService {
     }
   }
 
+  // save fcm token
   async saveFcmToken({
     user_id,
     fcm_token,
@@ -280,6 +281,7 @@ export class AuthService {
       };
     }
   }
+  
   // update user
   async updateUser(
     userId: string,
@@ -348,7 +350,8 @@ export class AuthService {
       };
     }
   }
-  // done
+ 
+  // forgot password
   async forgotPassword(email) {
     try {
       const user = await this.userRepository.exist({
@@ -385,7 +388,8 @@ export class AuthService {
       };
     }
   }
-  // done
+  
+  // resend token
   async resendToken(email: string) {
     try {
       const user = await this.userRepository.getUserByEmail(email);
@@ -422,7 +426,8 @@ export class AuthService {
       };
     }
   }
-  // done
+
+  // verify token
   async verifyToken({ email, token }) {
     try {
       const user = await this.userRepository.exist({
@@ -461,7 +466,8 @@ export class AuthService {
       };
     }
   }
-  //done
+ 
+  // verify email
   async verifyEmail({ email, token }) {
     try {
       const user = await this.userRepository.exist({
@@ -508,7 +514,8 @@ export class AuthService {
       };
     }
   }
-  // done
+ 
+  // resend verification email
   async resendVerificationEmail(email: string) {
     try {
       const user = await this.userRepository.getUserByEmail(email);
@@ -544,7 +551,8 @@ export class AuthService {
       };
     }
   }
-  //
+ 
+  // reset password
   async resetPassword({ email, token, password }) {
     try {
       const user = await this.userRepository.exist({
@@ -594,7 +602,12 @@ export class AuthService {
     }
   }
 
-  async changePassword({ user_id, oldPassword, newPassword }) {
+  // change password
+  async changePassword({ 
+    user_id, 
+    oldPassword, 
+    newPassword 
+  }) {
     try {
       const user = await this.userRepository.getUserDetails(user_id);
 
@@ -636,6 +649,7 @@ export class AuthService {
   /*----------------------------------------------
   // topic: maid Verification Part Start ---------->
   -----------------------------------------------*/
+
   // submit verification
   async submitVerification(
     userId: string,
@@ -805,6 +819,11 @@ export class AuthService {
   /*----------------------------------------------
   // topic: maid Verification Part End ---------->
   -----------------------------------------------*/
+
+  
+
+
+
 
   // ---------------------------------(end)---------------------------------------
 
