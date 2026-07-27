@@ -366,6 +366,9 @@ model Booking {
   booking_date DateTime @db.Date
   slot         Slot
 
+  // complete time
+  completed_at DateTime?
+
   // location 
   maid_location      String
   homeowner_location String

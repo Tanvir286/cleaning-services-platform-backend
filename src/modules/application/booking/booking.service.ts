@@ -365,10 +365,18 @@ export class BookingService {
       );
     }
 
+    await sendUserNotification({
+      sender_id: userId,
+      receiver_id: maid_id,
+      text: `New booking created by ${booking.user.name} for ${booking.maid.name} on ${formatBookingDate(booking.booking_date)}.`,
+      type: 'create booking',   
+      entity_id: booking.id,
+    });
+          
     await sendAdminNotification({
       sender_id: userId,
-      text: `New booking created by ${booking.user.name} for ${booking.maid.name} on ${formatBookingDate(booking.booking_date)}.`,
-      type: 'create_booking',
+      text: `New booking created by ${booking.user.name} for ${booking.maid.name} on ${formatBookingDate(booking.booking_date)}.`,  
+      type: 'create booking',
       entity_id: booking.id,
     });
 
@@ -650,7 +658,7 @@ export class BookingService {
       sender_id: userId,
       receiver_id: booking.maid_id,
       text: `Booking cancelled by homeowner for ${booking.id} on ${formatBookingDate(booking.booking_date)}. Reason: ${cancle_reason}`,
-      type: 'cancel_booking',
+      type: 'cancel booking',
       entity_id: booking.id,
     });
 
@@ -1012,8 +1020,8 @@ export class BookingService {
       sender_id: maidId,
       text: `Booking ${status.toLowerCase()} by maid for ${booking.id} on ${formatBookingDate(booking.booking_date)}.`,
       type: (status === BookingStatus.CONFIRMED
-        ? 'accept_booking'
-        : 'reject_booking') as any,
+        ? 'accept booking'
+        : 'reject booking') as any,
       entity_id: booking.id,
     });
 
@@ -1171,7 +1179,7 @@ export class BookingService {
     await sendAdminNotification({
       sender_id: maidId,
       text: `Booking started by maid for ${booking.id} on ${formatBookingDate(booking.booking_date)}.`,
-      type: 'started_booking',
+      type: 'started booking',
       entity_id: booking.id,
     });
 
@@ -1219,8 +1227,18 @@ export class BookingService {
         status: status,
         before_photos: uploadedBeforePhotos,
         after_photos: uploadedAfterPhotos,
+        completed_at: new Date(),
       },
     });
+
+
+    await sendUserNotification({
+      receiver_id: booking.user_id,
+      text: `Booking completed successfully for ${booking.id} on ${formatBookingDate(booking.booking_date)}.`,
+      type: 'complete_booking',
+      entity_id: booking.id,
+    });
+
 
     return {
       success: true,
@@ -1242,6 +1260,7 @@ export class BookingService {
   -----------------------------------------*/
   // create danger booking
   async createDangerBooking(maidId: string, bookingId: string) {
+  
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
       select: {
@@ -1349,7 +1368,7 @@ export class BookingService {
     await sendAdminNotification({
       sender_id: maidId,
       text: `Danger alert reported by maid for ${booking.id} on ${formatBookingDate(booking.booking_date)}.`,
-      type: 'danger_request',
+      type: 'danger request',
       entity_id: booking.id,
     });
 

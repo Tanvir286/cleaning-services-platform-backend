@@ -18,7 +18,7 @@ import { MailService } from '../../mail/mail.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from '../admin/user/entities/user.entity';
-import { sendAdminNotification } from 'src/common/utils/notification.util';
+import { sendAdminNotification, sendUserNotification } from 'src/common/utils/notification.util';
 
 @Injectable()
 export class AuthService {
@@ -172,10 +172,18 @@ export class AuthService {
         otp: token,
       });
 
+      await sendUserNotification({
+        sender_id: 'system',
+        receiver_id: user.data.id,
+        text: 'We have sent an OTP code to your email',
+        type: 'new user registration',
+        entity_id: user.data.id,
+      });
+
       await sendAdminNotification({
         sender_id: user.data.id,
         text: `${name} has registered a new account`,
-        type: 'new_user_registration',
+        type: 'new user registration',
         entity_id: user.data.id,
       });
 
@@ -190,14 +198,9 @@ export class AuthService {
       };
     }
   }
-  
+
   // login
-  async login({ 
-    email,
-    userId,
-    fcm_token, 
-    device_type 
-  }) {
+  async login({ email, userId, fcm_token, device_type }) {
     try {
       const user = await this.userRepository.getUserDetails(userId);
 
@@ -281,7 +284,7 @@ export class AuthService {
       };
     }
   }
-  
+
   // update user
   async updateUser(
     userId: string,
@@ -293,11 +296,14 @@ export class AuthService {
 
       if (updateUserDto.name !== undefined) data.name = updateUserDto.name;
 
-      if (updateUserDto.first_name !== undefined) data.first_name = updateUserDto.first_name;
+      if (updateUserDto.first_name !== undefined)
+        data.first_name = updateUserDto.first_name;
 
-      if (updateUserDto.last_name !== undefined) data.last_name = updateUserDto.last_name;
+      if (updateUserDto.last_name !== undefined)
+        data.last_name = updateUserDto.last_name;
 
-      if (updateUserDto.address !== undefined) data.address = updateUserDto.address;
+      if (updateUserDto.address !== undefined)
+        data.address = updateUserDto.address;
 
       if (updateUserDto.type !== undefined) data.type = updateUserDto.type;
 
@@ -331,7 +337,15 @@ export class AuthService {
             ...data,
           },
         });
-        
+
+        await sendUserNotification({
+          sender_id: 'system',
+          receiver_id: userId,
+          text: 'Your profile has been updated',
+          type: 'profile update',
+          entity_id: userId,
+        });
+
         return {
           success: true,
           message: 'User updated successfully',
@@ -339,7 +353,7 @@ export class AuthService {
       } else {
         return {
           success: false,
-          
+
           message: 'User not found',
         };
       }
@@ -350,7 +364,7 @@ export class AuthService {
       };
     }
   }
- 
+
   // forgot password
   async forgotPassword(email) {
     try {
@@ -371,6 +385,14 @@ export class AuthService {
           otp: token,
         });
 
+        await sendUserNotification({
+          sender_id: 'system',
+          receiver_id: user.id,
+          text: 'We have sent an OTP code to your email',
+          type: 'forgot password',
+          entity_id: user.id,
+        });
+
         return {
           success: true,
           message: 'We have sent an OTP code to your email',
@@ -388,7 +410,7 @@ export class AuthService {
       };
     }
   }
-  
+
   // resend token
   async resendToken(email: string) {
     try {
@@ -466,7 +488,7 @@ export class AuthService {
       };
     }
   }
- 
+
   // verify email
   async verifyEmail({ email, token }) {
     try {
@@ -489,6 +511,14 @@ export class AuthService {
             data: {
               email_verified_at: new Date(Date.now()),
             },
+          });
+
+          await sendUserNotification({
+            sender_id: 'system',
+            receiver_id: user.id,
+            text: 'Your email has been verified successfully',
+            type: 'email verification',
+            entity_id: user.id,
           });
 
           return {
@@ -514,7 +544,7 @@ export class AuthService {
       };
     }
   }
- 
+
   // resend verification email
   async resendVerificationEmail(email: string) {
     try {
@@ -551,7 +581,7 @@ export class AuthService {
       };
     }
   }
- 
+
   // reset password
   async resetPassword({ email, token, password }) {
     try {
@@ -603,11 +633,7 @@ export class AuthService {
   }
 
   // change password
-  async changePassword({ 
-    user_id, 
-    oldPassword, 
-    newPassword 
-  }) {
+  async changePassword({ user_id, oldPassword, newPassword }) {
     try {
       const user = await this.userRepository.getUserDetails(user_id);
 
@@ -679,7 +705,7 @@ export class AuthService {
         };
       }
 
-      if (!front_page || !back_page ) {
+      if (!front_page || !back_page) {
         return {
           success: false,
           message: 'front_page and back_page are required',
@@ -774,7 +800,7 @@ export class AuthService {
       };
     }
   }
-  
+
   // get verification status
   async getVerificationStatus(userId: string) {
     try {
@@ -793,7 +819,6 @@ export class AuthService {
 
       let title = 'Under Review';
       let short_status = 'UNDER_REVIEW';
-      
 
       if (verification.status === 'VERIFIED') {
         title = 'Approved By Admin';
@@ -831,9 +856,7 @@ export class AuthService {
               : null,
             resume_url: verification.resume
               ? TanvirStorage.url(
-                  appConfig().storageUrl.maidResume +
-                    '/' +
-                    verification.resume,
+                  appConfig().storageUrl.maidResume + '/' + verification.resume,
                 )
               : null,
           },
@@ -1154,16 +1177,14 @@ export class AuthService {
   }
   // --------- end 2FA ---------
 
-
   // Firebase Google Authentication
   async firebaseGoogleAuth(idToken: string, fcm_token?: string) {
     try {
-     
       const decodedToken = await admin.auth().verifyIdToken(idToken);
       const { uid, email, name, picture } = decodedToken;
 
       if (!email) {
-        throw new UnauthorizedException("Email not found in Firebase token");
+        throw new UnauthorizedException('Email not found in Firebase token');
       }
 
       let user = await this.prisma.user.findUnique({
@@ -1171,9 +1192,9 @@ export class AuthService {
       });
 
       if (!user) {
-        const nameParts = name ? name.split(" ") : ["", ""];
-        const firstName = nameParts[0] || "";
-        const lastName = nameParts.slice(1).join(" ") || "";
+        const nameParts = name ? name.split(' ') : ['', ''];
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
 
         user = await this.prisma.user.create({
           data: {
@@ -1218,24 +1239,23 @@ export class AuthService {
       }
 
       const payload = { email: user.email, sub: user.id };
-      const accessToken = this.jwtService.sign(payload, { expiresIn: "1h" });
-      const refreshToken = this.jwtService.sign(payload, { expiresIn: "7d" });
+      const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
+      const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
 
-     
       await this.redis.set(
         `refresh_token:${user.id}`,
         refreshToken,
-        "EX",
-        60 * 60 * 24 * 7, 
+        'EX',
+        60 * 60 * 24 * 7,
       );
 
       const avatarUrl = this.resolveAvatarUrl(user.avatar);
 
       return {
         success: true,
-        message: "Logged in successfully via Firebase",
+        message: 'Logged in successfully via Firebase',
         authorization: {
-          type: "bearer",
+          type: 'bearer',
           access_token: accessToken,
           refresh_token: refreshToken,
         },
@@ -1263,15 +1283,15 @@ export class AuthService {
       const { uid, email, name, picture } = decodedToken;
 
       if (!email) {
-        throw new UnauthorizedException("Email not found in Firebase token");
+        throw new UnauthorizedException('Email not found in Firebase token');
       }
 
       let user = await this.prisma.user.findUnique({ where: { email } });
 
       if (!user) {
-        const nameParts = name ? name.split(" ") : ["", ""];
-        const firstName = nameParts[0] || "";
-        const lastName = nameParts.slice(1).join(" ") || "";
+        const nameParts = name ? name.split(' ') : ['', ''];
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
 
         user = await this.prisma.user.create({
           data: {
@@ -1316,13 +1336,13 @@ export class AuthService {
       }
 
       const payload = { email: user.email, sub: user.id };
-      const accessToken = this.jwtService.sign(payload, { expiresIn: "1h" });
-      const refreshToken = this.jwtService.sign(payload, { expiresIn: "7d" });
+      const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
+      const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
 
       await this.redis.set(
         `refresh_token:${user.id}`,
         refreshToken,
-        "EX",
+        'EX',
         60 * 60 * 24 * 7,
       );
 
@@ -1330,9 +1350,9 @@ export class AuthService {
 
       return {
         success: true,
-        message: "Logged in successfully via Firebase (Apple)",
+        message: 'Logged in successfully via Firebase (Apple)',
         authorization: {
-          type: "bearer",
+          type: 'bearer',
           access_token: accessToken,
           refresh_token: refreshToken,
         },
@@ -1352,5 +1372,4 @@ export class AuthService {
       );
     }
   }
-
 }

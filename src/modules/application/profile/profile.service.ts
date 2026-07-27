@@ -452,7 +452,7 @@ export class ProfileService {
       sender_id: userId,
       receiver_id: userId,
       text: `Your profile has been updated successfully.`,
-      type: 'profile_update',
+      type: 'profile update',
       entity_id: userId,
     });
 
@@ -647,7 +647,7 @@ export class ProfileService {
       sender_id: userId,
       receiver_id: userId,
       text: `Your profile has been updated successfully.`,
-      type: 'profile_update',
+      type: 'profile update',
       entity_id: userId,
     });
 
@@ -693,7 +693,7 @@ export class ProfileService {
       sender_id: userId,
       receiver_id: userId,
       text: `Your location has been saved successfully.`,
-      type: 'profile_update',
+      type: 'profile update',
       entity_id: userId,
     });
 
