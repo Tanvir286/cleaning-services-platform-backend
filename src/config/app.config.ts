@@ -91,6 +91,7 @@ export default () => ({
     blog: '/blog',
     avatar: '/avatar',
     verification: '/verification',
+    maidResume: '/maid-resume',
     portfolio: '/portfolio',
     websiteInfo: '/website-info',
     maidverification: '/maid-verification',

@@ -429,8 +429,60 @@ export class AuthController {
   -----------------------------------------------*/
   
   // upload resume
-  
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.MAID)
+  @Post('maid/resume')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'resume', maxCount: 1 },
+      ],
+      {
+        storage: memoryStorage(),
+        limits: {
+          fileSize: 5 * 1024 * 1024,
+        },
+      },
+    ),
+  )
+  async uploadResume(
+    @Req() req: Request,
+    @UploadedFiles()
+    files: {
+      resume?: Express.Multer.File[];
+    },
+  ) {
+    try {
+      const user_id = req.user.userId;
+      const resume = files?.resume ? files.resume[0] : null;
+      console.log(user_id,resume)
+      const response = await this.authService.uploadResume(user_id, resume);
+      return response;
+    } catch (error: any) {
+      return {
+        success: false,
+        message: 'Failed to upload resume',
+      };
+    }
+  }
 
+  
+  // get resume
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.MAID)
+  @Get('maid/resume')
+  async getResume(@Req() req: Request) {
+    try {
+      const user_id = req.user.userId;
+      const response = await this.authService.getResume(user_id);
+      return response;
+    } catch (error: any) {
+      return {
+        success: false,
+        message: 'Failed to get resume',
+      };
+    }
+  }
 
 
 

@@ -820,10 +820,132 @@ export class AuthService {
   // topic: maid Verification Part End ---------->
   -----------------------------------------------*/
 
-  
+  // upload resume
+  async uploadResume(
+    userId: string, 
+    resume?: Express.Multer.File) {
+    try {
+      const data: any = {};
 
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, type: true },
+      });
 
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+        };
+      }
 
+      if (user.type !== 'MAID') {
+        return {
+          success: false,
+          message: 'Only maid can upload resume',
+        };
+      }
+
+      if (!resume) {
+        return {
+          success: false,
+          message: 'Resume is required',
+        };
+      }
+
+      const existingResume = await this.prisma.maidResume.findFirst({
+        where: { user_id: userId },
+        orderBy: { created_at: 'desc' },
+      });
+
+      if (existingResume && existingResume.status === 'PENDING') {
+        return {
+          success: false,
+          message:
+            'You already have a pending resume. Please wait for it to be reviewed before submitting a new one.',
+          data: {
+            id: existingResume.id,
+            status: existingResume.status,
+          },
+        };
+      }
+
+      if (resume) {
+        // upload resume
+        const resumeFileName = `${StringHelper.randomString()}_${resume.originalname}`;
+        await TanvirStorage.put(
+          appConfig().storageUrl.maidResume + '/' + resumeFileName,
+          resume.buffer,
+        );
+        data.resume = resumeFileName;
+      }
+
+      await this.prisma.maidResume.create({
+        data: {
+          user_id: userId,
+          resume: data.resume,
+          status: 'PENDING',
+        },
+      });
+
+      return {
+        success: true,
+        message: 'Resume uploaded successfully',
+        data: {
+          resume_url: TanvirStorage.url(
+            appConfig().storageUrl.maidResume + '/' + data.resume,
+          ),
+        },
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+  // get resume
+  async getResume(userId: string) {
+    try {
+      const resume = await this.prisma.maidResume.findFirst({
+        where: { user_id: userId },
+        orderBy: { created_at: 'desc' },
+      });
+
+      if (!resume) {
+        return {
+          success: true,
+          message: 'No resume found',
+          data: null,
+        };
+      }
+
+      return {
+        success: true,
+        data: {
+          id: resume.id,
+          status: resume.status,
+          resume_url: resume.resume
+            ? TanvirStorage.url(
+                appConfig().storageUrl.maidResume + '/' + resume.resume,
+              )
+            : null,
+          submission_date: resume.created_at,
+          approval_date: resume.verified_at,
+        },
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+  /*----------------------------------------------
+  // topic: maid Resume Part End ---------->
+  -----------------------------------------------*/
 
   // ---------------------------------(end)---------------------------------------
 
