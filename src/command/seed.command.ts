@@ -9,13 +9,6 @@ interface SeedCommandOptions {
   reset?: boolean;
 }
 
-/*********************** USAGE INSTRUCTIONS ***********************
-Seed everything together   npm run seed 
-Seed only users            npm run seed -- --users-only
-Seed only packages         npm run seed -- --packages-only
-Seed only commission       npm run seed -- --commission-only
-Reset and seed             npm run seed:reset
-******************************************************************/
 
 @Command({
   name: 'seed',
@@ -99,48 +92,60 @@ export class SeedCommand extends CommandRunner {
       }
 
       // ADMIN
+      const adminData = {
+        name: 'Admin User',
+        email: 'admin@gmail.com',
+        password,
+        type: 'ADMIN' as const,
+        location: 'Dhaka',
+        bio: 'System administrator',
+        email_verified_at: new Date(),
+        latitude: 23.8275,
+        longitude: 90.425,
+      };
+
       await this.prisma.user.upsert({
         where: { email: 'admin@gmail.com' },
-        update: {},
-        create: {
-          name: 'Admin User',
-          email: 'admin@gmail.com',
-          password,
-          type: 'ADMIN',
-          location: 'Dhaka',
-          bio: 'System administrator',
-          email_verified_at: new Date(),
-        },
+        update: adminData,
+        create: adminData,
       });
 
       // MAID
+      const maidData = {
+        name: 'Professional Maid',
+        email: 'maid@gmail.com',
+        password,
+        type: 'MAID' as const,
+        location: 'Dhaka',
+        bio: 'Experienced cleaning professional',
+        email_verified_at: new Date(),
+        latitude: 23.7918,
+        longitude: 90.404,
+      };
+
       await this.prisma.user.upsert({
         where: { email: 'maid@gmail.com' },
-        update: {},
-        create: {
-          name: 'Professional Maid',
-          email: 'maid@gmail.com',
-          password,
-          type: 'MAID',
-          location: 'Dhaka',
-          bio: 'Experienced cleaning professional',
-          email_verified_at: new Date(),
-        },
+        update: maidData,
+        create: maidData,
       });
 
       // HOMEOWNER
+      const homeownerData = {
+        name: 'Home Owner',
+        email: 'homeowner@gmail.com',
+        password,
+        type: 'HOMEOWNER' as const,
+        location: 'Dhaka',
+        bio: 'Looking for home cleaning services',
+        email_verified_at: new Date(),
+        latitude: 23.845,
+        longitude: 90.439,
+      };
+
       await this.prisma.user.upsert({
         where: { email: 'homeowner@gmail.com' },
-        update: {},
-        create: {
-          name: 'Home Owner',
-          email: 'homeowner@gmail.com',
-          password,
-          type: 'HOMEOWNER',
-          location: 'Dhaka',
-          bio: 'Looking for home cleaning services',
-          email_verified_at: new Date(),
-        },
+        update: homeownerData,
+        create: homeownerData,
       });
 
       console.log('✅ Users seeding completed');
@@ -213,7 +218,7 @@ export class SeedCommand extends CommandRunner {
             duration: '2-3 Hours',
           },
           {
-            title:'EcoRestore Deep Clean',
+            title: 'EcoRestore Deep Clean',
             serviceType: 'RESIDENTIAL_CLEANING',
             price: 229,
             description:
@@ -242,7 +247,9 @@ export class SeedCommand extends CommandRunner {
     } else if (commissionOnly) {
       console.log('🎉 Seed completed: Commission only');
     } else {
-      console.log('🎉 Seed completed: Users + Commission + Residential Cleaning Packages');
+      console.log(
+        '🎉 Seed completed: Users + Commission + Residential Cleaning Packages',
+      );
     }
 
     await this.prisma.$disconnect();

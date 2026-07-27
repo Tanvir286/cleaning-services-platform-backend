@@ -43,8 +43,14 @@ export class BookingController {
   --------------------------------------------------*/
 
   // available maids list
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.HOMEOWNER)
   @Get('available-maidlist')
-  async getAvailableMaids(@Query() paginationDto: PaginationDto) {
+  async getAvailableMaids(
+    @Query() paginationDto: PaginationDto,
+    @Req() req,
+  ) {
+    const userId = req.user.userId;
     return this.bookingService.getAvailableMaids(paginationDto);
   }
 

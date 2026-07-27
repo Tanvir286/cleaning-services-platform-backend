@@ -369,13 +369,13 @@ export class BookingService {
       sender_id: userId,
       receiver_id: maid_id,
       text: `New booking created by ${booking.user.name} for ${booking.maid.name} on ${formatBookingDate(booking.booking_date)}.`,
-      type: 'create booking',   
+      type: 'create booking',
       entity_id: booking.id,
     });
-          
+
     await sendAdminNotification({
       sender_id: userId,
-      text: `New booking created by ${booking.user.name} for ${booking.maid.name} on ${formatBookingDate(booking.booking_date)}.`,  
+      text: `New booking created by ${booking.user.name} for ${booking.maid.name} on ${formatBookingDate(booking.booking_date)}.`,
       type: 'create booking',
       entity_id: booking.id,
     });
@@ -1033,10 +1033,7 @@ export class BookingService {
   }
 
   //  booking status (pending, upcoming, completed, cancelled)
-  async getBookingsByStatusForMaid(
-    maidId: string, 
-    query: PaginationstausDto
-  ) {
+  async getBookingsByStatusForMaid(maidId: string, query: PaginationstausDto) {
     const { page, perPage, bookingStatus } = query;
     const skip = (page - 1) * perPage;
 
@@ -1231,14 +1228,12 @@ export class BookingService {
       },
     });
 
-
     await sendUserNotification({
       receiver_id: booking.user_id,
       text: `Booking completed successfully for ${booking.id} on ${formatBookingDate(booking.booking_date)}.`,
       type: 'complete_booking',
       entity_id: booking.id,
     });
-
 
     return {
       success: true,
@@ -1260,7 +1255,6 @@ export class BookingService {
   -----------------------------------------*/
   // create danger booking
   async createDangerBooking(maidId: string, bookingId: string) {
-  
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
       select: {
