@@ -63,7 +63,7 @@ export class ProfileController {
   @UseInterceptors(
     FileInterceptor('image', {
       storage: memoryStorage(),
-      limits: { fileSize: 5 * 1024 * 1024 },
+      limits: { fileSize: 50 * 1024 * 1024 },
     }),
   )
   async update(
@@ -105,7 +105,7 @@ export class ProfileController {
   @UseInterceptors(
     FileInterceptor('image', {
       storage: memoryStorage(),
-      limits: { fileSize: 5 * 1024 * 1024 },
+      limits: { fileSize: 50 * 1024 * 1024 },
   }),
   )
   @Patch('homeowner/update')

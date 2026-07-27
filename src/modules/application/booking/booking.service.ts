@@ -1025,7 +1025,10 @@ export class BookingService {
   }
 
   //  booking status (pending, upcoming, completed, cancelled)
-  async getBookingsByStatusForMaid(maidId: string, query: PaginationstausDto) {
+  async getBookingsByStatusForMaid(
+    maidId: string, 
+    query: PaginationstausDto
+  ) {
     const { page, perPage, bookingStatus } = query;
     const skip = (page - 1) * perPage;
 

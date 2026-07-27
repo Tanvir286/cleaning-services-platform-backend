@@ -150,7 +150,7 @@ export class AuthController {
   @UseInterceptors(
     FileInterceptor('image', {
       storage: memoryStorage(),
-      limits: { fileSize: 5 * 1024 * 1024 },
+      limits: { fileSize: 50 * 1024 * 1024 },
     }),
   )
   async updateUser(
@@ -371,7 +371,7 @@ export class AuthController {
       {
         storage: memoryStorage(),
         limits: {
-          fileSize: 5 * 1024 * 1024,
+          fileSize: 50 * 1024 * 1024,
         },
       },
     ),
