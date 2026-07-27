@@ -173,11 +173,6 @@ model MaidVerification {
   @@map("maid_verifications")
 }
 
-
-
-
-
-
 model Ucode {
   id         String   @id @default(cuid())
   created_at DateTime @default(now())
