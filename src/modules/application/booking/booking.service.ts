@@ -33,6 +33,25 @@ import {
   sendUserNotification,
 } from 'src/common/utils/notification.util';
 
+function getHaversineDistanceKm(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 @Injectable()
 export class BookingService {
   constructor(private readonly prisma: PrismaService) {}
@@ -41,43 +60,79 @@ export class BookingService {
   // topic:﹝﹝﹝ available maid and  maid deatils ﹞﹞﹞
   --------------------------------------------------*/
 
-  // available maids list
-  async getAvailableMaids(paginationDto: PaginationDto) {
-    const { page, perPage } = paginationDto;
-    const skip = (page - 1) * perPage;
+  // available maids list within 40km range
+  async getAvailableMaids(userId: string, paginationDto?: PaginationDto) {
+    const page = Number(paginationDto?.page) || 1;
+    const perPage = Number(paginationDto?.perPage) || 10;
 
-    const whereCondition: any = {
-      type: UserType.MAID,
-      availability: true,
+    const homeowner = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { latitude: true, longitude: true },
+    });
 
-      maidVerification: {
-        some: {
-          status: VerificationStatus.VERIFIED,
+    if (!homeowner) {
+      throw new NotFoundException('Homeowner not found');
+    }
+
+    if (
+      homeowner.latitude === null ||
+      homeowner.latitude === undefined ||
+      homeowner.longitude === null ||
+      homeowner.longitude === undefined
+    ) {
+      throw new BadRequestException(
+        'Homeowner latitude and longitude are missing in database. Please update your profile location.',
+      );
+    }
+
+    const maids = await this.prisma.user.findMany({
+      where: {
+        type: UserType.MAID,
+        availability: true,
+        latitude: { not: null },
+        longitude: { not: null },
+        maidVerification: {
+          some: {
+            status: VerificationStatus.VERIFIED,
+          },
         },
       },
-    };
+      select: {
+        id: true,
+        name: true,
+        avatar: true,
+        location: true,
+        latitude: true,
+        longitude: true,
+        experience_years: true,
+        service_type: true,
+      },
+    });
 
-    const [total, maids] = await this.prisma.$transaction([
-      this.prisma.user.count({ where: whereCondition }),
-      this.prisma.user.findMany({
-        where: whereCondition,
-        select: {
-          id: true,
-          name: true,
-          avatar: true,
-          location: true,
-          experience_years: true,
-          service_type: true,
-        },
-        skip,
-        take: perPage,
-      }),
-    ]);
+    const maidsWithDistance = maids
+      .map((maid) => {
+        const distance_km = getHaversineDistanceKm(
+          homeowner.latitude,
+          homeowner.longitude,
+          maid.latitude,
+          maid.longitude,
+        );
+        return {
+          ...maid,
+          distance_km: Number(distance_km.toFixed(2)),
+        };
+      })
+      .filter((maid) => maid.distance_km <= 40)
+      .sort((a, b) => a.distance_km - b.distance_km);
+
+    const total = maidsWithDistance.length;
+    const skip = (page - 1) * perPage;
+    const paginatedMaids = maidsWithDistance.slice(skip, skip + perPage);
 
     const reviews = await this.prisma.review.groupBy({
       by: ['maid_id'],
       where: {
-        maid_id: { in: maids.map((maid) => maid.id) },
+        maid_id: { in: paginatedMaids.map((maid) => maid.id) },
       },
       _avg: {
         rating: true,
@@ -101,7 +156,7 @@ export class BookingService {
       success: true,
       message: 'Available maids retrieved successfully',
       data: paginateResponse(
-        maids.map((maid) => ({
+        paginatedMaids.map((maid) => ({
           id: maid.id,
           name: maid.name,
           avatar: maid.avatar
@@ -110,6 +165,9 @@ export class BookingService {
               )
             : null,
           location: maid.location,
+          latitude: maid.latitude,
+          longitude: maid.longitude,
+          distance_km: maid.distance_km,
           experience_years: maid.experience_years,
           service_type: maid.service_type,
           average_rating: reviewMap.get(maid.id)?.average_rating ?? 0,

@@ -48,9 +48,10 @@ export class BookingController {
   @Get('available-maidlist')
   async getAvailableMaids(
     @Req() req,
+    @Query() paginationDto: PaginationDto,
   ) {
     const userId = req.user.userId;
-    return this.bookingService.getAvailableMaids(userId);
+    return this.bookingService.getAvailableMaids(userId, paginationDto);
   }
 
   // maid individual details slot
