@@ -42,16 +42,15 @@ export class BookingController {
   // topic:﹝﹝﹝ available maid and  maid deatils ﹞﹞﹞
   --------------------------------------------------*/
 
-  // available maids list
+  // available maids list within 40km range
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.HOMEOWNER)
   @Get('available-maidlist')
   async getAvailableMaids(
-    @Query() paginationDto: PaginationDto,
     @Req() req,
   ) {
     const userId = req.user.userId;
-    return this.bookingService.getAvailableMaids(paginationDto);
+    return this.bookingService.getAvailableMaids(userId);
   }
 
   // maid individual details slot
