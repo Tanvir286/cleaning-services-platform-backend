@@ -32,6 +32,7 @@ import {
   sendAdminNotification,
   sendUserNotification,
 } from 'src/common/utils/notification.util';
+import { GetAvailableMaidsDto } from './dto/get-available-maids.dto';
 
 function getHaversineDistanceKm(
   lat1: number,
@@ -61,27 +62,30 @@ export class BookingService {
   --------------------------------------------------*/
 
   // available maids list within 40km range
-  async getAvailableMaids(userId: string, paginationDto?: PaginationDto) {
-    const page = Number(paginationDto?.page) || 1;
-    const perPage = Number(paginationDto?.perPage) || 10;
+  async getAvailableMaids(userId: string, queryDto?: GetAvailableMaidsDto) {
+    const page = Number(queryDto?.page) || 1;
+    const perPage = Number(queryDto?.perPage) || 10;
 
-    const homeowner = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { latitude: true, longitude: true },
-    });
+    let lat = queryDto?.latitude != null ? Number(queryDto.latitude) : null;
+    let lng = queryDto?.longitude != null ? Number(queryDto.longitude) : null;
 
-    if (!homeowner) {
-      throw new NotFoundException('Homeowner not found');
+    if (lat === null || isNaN(lat) || lng === null || isNaN(lng)) {
+      const homeowner = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { latitude: true, longitude: true },
+      });
+
+      if (!homeowner) {
+        throw new NotFoundException('Homeowner not found');
+      }
+
+      lat = homeowner.latitude;
+      lng = homeowner.longitude;
     }
 
-    if (
-      homeowner.latitude === null ||
-      homeowner.latitude === undefined ||
-      homeowner.longitude === null ||
-      homeowner.longitude === undefined
-    ) {
+    if (lat === null || lat === undefined || lng === null || lng === undefined) {
       throw new BadRequestException(
-        'Homeowner latitude and longitude are missing in database. Please update your profile location.',
+        'Homeowner latitude and longitude are missing. Please provide latitude & longitude in query parameters or update your profile location in database.',
       );
     }
 
@@ -112,8 +116,8 @@ export class BookingService {
     const maidsWithDistance = maids
       .map((maid) => {
         const distance_km = getHaversineDistanceKm(
-          homeowner.latitude,
-          homeowner.longitude,
+          lat,
+          lng,
           maid.latitude,
           maid.longitude,
         );

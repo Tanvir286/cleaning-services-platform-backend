@@ -33,6 +33,8 @@ import { StartedBookingDto } from './dto/started-booking.dto';
 import { DangerDto } from './dto/danger.dto';
 import { SubmittedBookingDto } from './dto/submittted-booking.dto';
 
+import { GetAvailableMaidsDto } from './dto/get-available-maids.dto';
+
 @ApiTags('Booking')
 @Controller('booking')
 export class BookingController {
@@ -48,10 +50,10 @@ export class BookingController {
   @Get('available-maidlist')
   async getAvailableMaids(
     @Req() req,
-    @Query() paginationDto: PaginationDto,
+    @Query() queryDto: GetAvailableMaidsDto,
   ) {
     const userId = req.user.userId;
-    return this.bookingService.getAvailableMaids(userId, paginationDto);
+    return this.bookingService.getAvailableMaids(userId, queryDto);
   }
 
   // maid individual details slot
