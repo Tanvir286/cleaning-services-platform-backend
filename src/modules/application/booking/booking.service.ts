@@ -442,6 +442,10 @@ export class BookingService {
       entity_id: booking.id,
     });
 
+   
+
+
+
     const formatPackage = (
       pkg:
         | typeof booking.general_cleaning_package
