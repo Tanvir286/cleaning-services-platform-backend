@@ -832,4 +832,12 @@ export class ProfileService {
       message: 'Location deleted successfully',
     };
   }
+
+
 }
+
+
+
+
+
+  
