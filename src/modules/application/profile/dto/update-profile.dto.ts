@@ -9,6 +9,9 @@ export class UpdateProfileDto {
 
   @IsOptional()
   name?: string;
+
+  @IsOptional()
+  phone_number?: string;
  
   @IsOptional()
   location?: string;
