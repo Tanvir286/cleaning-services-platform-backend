@@ -204,6 +204,15 @@ export class AuthService {
     try {
       const user = await this.userRepository.getUserDetails(userId);
 
+      // Check email verification
+      if (!user?.email_verified_at) {
+        return {
+          success: false,
+          message: 'Please verify your email before logging in. Check your inbox for the verification code.',
+          email_verified: false,
+        };
+      }
+
       const payload = { email: email, sub: userId, type: user?.type };
 
       if (fcm_token) {
