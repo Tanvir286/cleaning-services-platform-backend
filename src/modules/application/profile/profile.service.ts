@@ -229,6 +229,7 @@ export class ProfileService {
           select: {
             status: true,
             verified_at: true,
+            rejected_reason: true,
           },
         },
       },
@@ -365,6 +366,7 @@ export class ProfileService {
         experience_years: user.experience_years,
         verification_status: user.maidVerification?.[0]?.status || 'PENDING',
         verified_at: user.maidVerification?.[0]?.verified_at || null,
+        rejected_reason: user.maidVerification?.[0]?.rejected_reason || null,
         jobs_done: jobsDone,
         total_earnings,
         repeat_client_rate,

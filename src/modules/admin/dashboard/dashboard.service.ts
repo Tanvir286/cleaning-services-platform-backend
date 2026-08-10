@@ -891,6 +891,7 @@ export class DashboardService {
                 id_card_front: true,
                 id_card_back: true,
                 resume: true,
+                rejected_reason: true,
               },
             },
           },
@@ -900,13 +901,14 @@ export class DashboardService {
 
       const data = requests.map((item) => ({
         id: item.id,
-        name: item.name+1,
+        name: item.name,
         email: item.email,
         phone_number: item.phone_number,
         avatar: item.avatar,
         location: item.location || 'N/A',
         applied_date: item.maidVerification[0]?.created_at || null,
         status: item.maidVerification[0]?.status?.toLowerCase() || 'pending',
+        rejected_reason: item.maidVerification[0]?.rejected_reason || null,
       }));
 
       return {
@@ -952,6 +954,7 @@ export class DashboardService {
               id_card_front: true,
               id_card_back: true,
               resume: true,
+              rejected_reason: true,
             },
           },
         },
@@ -980,6 +983,7 @@ export class DashboardService {
         phone_number: cleaner.phone_number,
         location: cleaner.location || 'N/A',
         status: verification.status?.toLowerCase() || 'pending',
+        rejected_reason: verification.rejected_reason || null,
         id_card_front_url: verification.id_card_front
           ? TanvirStorage.url(
               appConfig().storageUrl.maidverification +
@@ -1019,7 +1023,7 @@ export class DashboardService {
   // approve or reject cleaner request by id
   async updateCleanerRequestById(id: string, updateDto: CleanerStatusDto) {
     try {
-      const { status } = updateDto;
+      const { status, rejected_reason } = updateDto;
 
       if (status !== 'VERIFIED' && status !== 'REJECTED') {
         return {
@@ -1048,13 +1052,14 @@ export class DashboardService {
         where: { id: verification.id },
         data: {
           status,
+          rejected_reason: status === 'REJECTED' ? (rejected_reason || null) : null,
           verified_at: status === 'VERIFIED' ? new Date() : null,
         },
       });
 
       await sendAdminNotification({
         sender_id: 'system',
-        text: `Your cleaner verification request has been ${status.toLowerCase()}.`,
+        text: `Your cleaner verification request has been ${status.toLowerCase()}.${status === 'REJECTED' && rejected_reason ? ` Reason: ${rejected_reason}` : ''}`,
         type: 'cleaner_verification_update',
         entity_id: id,
       });

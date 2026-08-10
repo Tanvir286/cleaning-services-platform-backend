@@ -166,6 +166,8 @@ model MaidVerification {
   id_card_back  String?
   resume        String?
 
+  rejected_reason String?
+
   status        VerificationStatus @default(PENDING)
 
   verified_at DateTime?

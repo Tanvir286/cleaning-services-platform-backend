@@ -837,6 +837,7 @@ export class AuthService {
           status: verification.status,
           short_status,
           title,
+          rejected_reason: verification.rejected_reason || null,
           submission_date: verification.created_at,
           approval_date: verification.verified_at,
           verification_documents: {
