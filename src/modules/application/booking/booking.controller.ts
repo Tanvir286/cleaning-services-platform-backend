@@ -258,9 +258,10 @@ export class BookingController {
   @Post('maid/create-danger/:id')
   async createDangerBooking(
     @Req() req, 
-    @Param('id') id: string
+    @Param('id') id: string,
+    @Body() dangerDto: DangerDto
   ) {
     const maidId = req.user.userId;
-    return this.bookingService.createDangerBooking(maidId, id);
+    return this.bookingService.createDangerBooking(maidId, id, dangerDto);
   }
 }

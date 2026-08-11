@@ -368,10 +368,12 @@ model Booking {
   booking_date DateTime @db.Date
   slot         Slot
 
-  // complete time
-  completed_at DateTime?
+  //start time
+  start_time DateTime?  
+  // end time
+  end_time DateTime?  
 
-  // location 
+  // location _
   maid_location      String
   homeowner_location String
 

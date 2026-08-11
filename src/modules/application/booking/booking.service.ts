@@ -628,6 +628,8 @@ export class BookingService {
         maid_longitude: booking.maid_longitude,
         homeowner_latitude: booking.homeowner_latitude,
         homeowner_longitude: booking.homeowner_longitude,
+        start_time: booking.start_time,
+        end_time: booking.end_time,
         date_time: `${formatBookingDate(booking.booking_date)}, at ${slotTime.start} - ${slotTime.end}`,
         price: booking.total_price ? `$${booking.total_price}` : null,
         package_details: {
@@ -661,6 +663,12 @@ export class BookingService {
         },
         status: booking.status,
         cancle_reason: booking.cancle_reason ?? null,
+        before_photos_url: (booking.before_photos as string[])?.map((fileName) =>
+          TanvirStorage.url(`${appConfig().storageUrl.booking}/${fileName}`),
+        ) ?? [],
+        after_photos_url: (booking.after_photos as string[])?.map((fileName) =>
+          TanvirStorage.url(`${appConfig().storageUrl.booking}/${fileName}`),
+        ) ?? [],
       },
     };
   }
@@ -1012,6 +1020,9 @@ export class BookingService {
       message: 'Booking details retrieved successfully',
       data: {
         id: booking.id,
+        status: booking.status,
+        start_time: booking.start_time,
+        end_time: booking.end_time,
         service: serviceType,
         package: packageData?.packageType,
         slot: booking.slot,
@@ -1048,6 +1059,12 @@ export class BookingService {
               )
             : null,
         },
+        before_photos_url: (booking.before_photos as string[])?.map((fileName) =>
+          TanvirStorage.url(`${appConfig().storageUrl.booking}/${fileName}`),
+        ) ?? [],
+        after_photos_url: (booking.after_photos as string[])?.map((fileName) =>
+          TanvirStorage.url(`${appConfig().storageUrl.booking}/${fileName}`),
+        ) ?? [],
       },
     };
   }
@@ -1236,7 +1253,7 @@ export class BookingService {
 
     const updatedBooking = await this.prisma.booking.update({
       where: { id: bookingId },
-      data: { status },
+      data: { status, start_time: new Date() },
     });
 
     await sendAdminNotification({
@@ -1290,7 +1307,7 @@ export class BookingService {
         status: status,
         before_photos: uploadedBeforePhotos,
         after_photos: uploadedAfterPhotos,
-        completed_at: new Date(),
+        end_time: new Date(),
       },
     });
 
@@ -1320,60 +1337,17 @@ export class BookingService {
   // topic:﹝﹝﹝ danger part ﹞﹞﹞
   -----------------------------------------*/
   // create danger booking
-  async createDangerBooking(maidId: string, bookingId: string) {
+  async createDangerBooking(maidId: string, bookingId: string,dangerDto:DangerDto) {
+   
+     const {lat,lng} = dangerDto; 
+   
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
       select: {
         id: true,
         maid_id: true,
-        homeowner_location: true,
         booking_date: true,
-
-        danger_notification: {
-          select: {
-            id: true,
-            booking_id: true,
-            user_id: true,
-            latitude: true,
-            longitude: true,
-            created_at: true,
-          },
-        },
-
-        live_locations: {
-          where: {
-            user_id: maidId,
-          },
-          orderBy: {
-            updated_at: 'desc',
-          },
-          take: 1,
-          select: {
-            latitude: true,
-            longitude: true,
-            updated_at: true,
-          },
-        },
-
-        booking_destinations: {
-          where: {
-            user_id: maidId,
-          },
-          orderBy: {
-            updated_at: 'desc',
-          },
-          take: 1,
-          select: {
-            pickup_lat: true,
-            pickup_lng: true,
-            dropoff_lat: true,
-            dropoff_lng: true,
-            distance_km: true,
-            distance_text: true,
-            duration_min: true,
-          },
-        },
-      },
+      }
     });
 
     if (!booking) {
@@ -1386,39 +1360,17 @@ export class BookingService {
       );
     }
 
-    const latestLiveLocation = booking.live_locations[0];
-
-    if (!latestLiveLocation) {
-      throw new NotFoundException('Live location not found for this booking');
-    }
-
-    const destination = booking.booking_destinations[0] ?? null;
-
-    if (booking.danger_notification) {
-      return {
-        success: true,
-        message: 'Danger alert already exists for this booking',
-        data: {
-          danger: booking.danger_notification,
-          maid_live_location: latestLiveLocation,
-          destination,
-        },
-      };
-    }
-
     const danger = await this.prisma.danger.create({
       data: {
         booking_id: booking.id,
         user_id: maidId,
-        maid_current_location: booking.homeowner_location,
-        latitude: latestLiveLocation.latitude,
-        longitude: latestLiveLocation.longitude,
+        latitude: lat,
+        longitude: lng,
       },
       select: {
         id: true,
         booking_id: true,
         user_id: true,
-        maid_current_location: true,
         latitude: true,
         longitude: true,
         created_at: true,
@@ -1437,8 +1389,8 @@ export class BookingService {
       message: 'Danger alert created successfully',
       data: {
         danger,
-        maid_live_location: latestLiveLocation,
-        destination,
+        maid_live_location: {lat,lng},
+     
       },
     };
   }
