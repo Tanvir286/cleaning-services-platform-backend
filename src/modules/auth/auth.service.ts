@@ -43,53 +43,51 @@ export class AuthService {
     return TanvirStorage.url(appConfig().storageUrl.avatar + '/' + avatar);
   }
 
-  // active deactive
-  // async activeDeactive(userId: string) {
-  //   try {
-  //     const user = await this.prisma.user.findFirst({
-  //       where: {
-  //         id: userId,
-  //       },
-  //       select: {
-  //         id: true,
-  //         active: true,
-  //       },
-  //     });
+  //active deactive
+  async activeDeactive(userId: string) {
 
-  //     if (!user) {
-  //       return {
-  //         success: false,
-  //         message: 'User not found',
-  //       };
-  //     }
+    try{
+      const user = await this.prisma.user.findFirst({
+        where: {
+          id: userId,
+        },
+        select: {
+          id: true,
+          active: true,
+        },
+      });
 
-  //     const response = await this.prisma.user.update({
-  //       where: {
-  //         id: userId,
-  //       },
-  //       data: {
-  //         active: !user.active,
-  //       },
-  //     });
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+        };
+      }
 
-  //     if (response) {
-  //       return {
-  //         success: true,
-  //         message: 'Active deactive successfully',
-  //       };
-  //     } else {
-  //       return {
-  //         success: false,
-  //         message: 'Failed to active deactive',
-  //       };
-  //     }
-  //   } catch (error: any) {
-  //     return {
-  //       success: false,
-  //       message: error.message,
-  //     };
-  //   }
-  // }
+      const updated = await this.prisma.user.update({
+        where: {
+          id: userId,
+        },
+        data: {
+          active: !user.active,
+        },
+      });
+
+      return {
+        success: true,
+        message: 'Active status toggled successfully',
+        data: { active: updated.active },
+      };
+
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+    
+
+  }
 
 
   // me

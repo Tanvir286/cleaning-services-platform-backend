@@ -40,20 +40,20 @@ export class AuthController {
 
   // active deactive
 
-  // @UseGuards(JwtAuthGuard)
-  // @Get('active-deactive')
-  // async activeDeactive(@Req() req: Request) {
-  //   try {
-  //     const user_id = req.user.userId;
-  //     const response = await this.authService.activeDeactive(user_id);
-  //     return response;
-  //   } catch (error: any) {
-  //     return {
-  //       success: false,
-  //       message: 'Failed to active deactive',
-  //     };
-  //   }
-  // }
+  @UseGuards(JwtAuthGuard)
+  @Get('active-deactive')
+  async activeDeactive(@Req() req: Request) {
+    try {
+      const user_id = req.user.userId;
+      const response = await this.authService.activeDeactive(user_id);
+      return response;
+    } catch (error: any) {
+      return {
+        success: false,
+        message: 'Failed to active deactive',
+      };
+    }
+  }
 
   // *get user details
   @UseGuards(JwtAuthGuard)
