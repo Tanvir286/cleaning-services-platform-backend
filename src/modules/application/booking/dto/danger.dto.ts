@@ -15,9 +15,5 @@ export class DangerDto {
   @Type(() => Number)
   lng: number;
 
-  @IsNotEmpty()
-  @IsString()
-  booking_id: string;
-
 }
 

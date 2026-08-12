@@ -43,6 +43,55 @@ export class AuthService {
     return TanvirStorage.url(appConfig().storageUrl.avatar + '/' + avatar);
   }
 
+  // active deactive
+  // async activeDeactive(userId: string) {
+  //   try {
+  //     const user = await this.prisma.user.findFirst({
+  //       where: {
+  //         id: userId,
+  //       },
+  //       select: {
+  //         id: true,
+  //         active: true,
+  //       },
+  //     });
+
+  //     if (!user) {
+  //       return {
+  //         success: false,
+  //         message: 'User not found',
+  //       };
+  //     }
+
+  //     const response = await this.prisma.user.update({
+  //       where: {
+  //         id: userId,
+  //       },
+  //       data: {
+  //         active: !user.active,
+  //       },
+  //     });
+
+  //     if (response) {
+  //       return {
+  //         success: true,
+  //         message: 'Active deactive successfully',
+  //       };
+  //     } else {
+  //       return {
+  //         success: false,
+  //         message: 'Failed to active deactive',
+  //       };
+  //     }
+  //   } catch (error: any) {
+  //     return {
+  //       success: false,
+  //       message: error.message,
+  //     };
+  //   }
+  // }
+
+
   // me
   async me(userId: string) {
     try {
