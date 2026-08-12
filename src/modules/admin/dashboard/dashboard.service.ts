@@ -712,10 +712,10 @@ export class DashboardService {
     try {
       const { status } = updateDto as any;
 
-      if (status !== 'VERIFIED' && status !== 'REJECTED') {
+      if (status !== BookingStatus.COMPLETED && status !== BookingStatus.REJECTED) {
         return {
           success: false,
-          message: 'Status must be VERIFIED or REJECTED',
+          message: 'Status must be COMPLETED or REJECTED',
         };
       }
 
@@ -738,7 +738,7 @@ export class DashboardService {
       }
 
       // Approve - Transfer amount to maid and record transaction
-      if (status === 'VERIFIED') {
+      if (status === BookingStatus.COMPLETED) {
         const maidId = existingBooking.maid_id;
         const amount = Number(existingBooking.total_price ?? 0);
 
