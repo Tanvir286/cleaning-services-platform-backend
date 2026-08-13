@@ -848,7 +848,9 @@ export class DashboardService {
   --------------------------------------------*/
 
   // get all cleaner requests with details
-  async getAllCleanerRequests(paginationDto: PaginationDto) {
+  async getAllCleanerRequests(
+    paginationDto: PaginationDto
+  ) {
     try {
       const page = paginationDto.page || 1;
       const perPage = paginationDto.perPage || 10;
@@ -1021,7 +1023,10 @@ export class DashboardService {
   }
 
   // approve or reject cleaner request by id
-  async updateCleanerRequestById(id: string, updateDto: CleanerStatusDto) {
+  async updateCleanerRequestById(
+    id: string, 
+    updateDto: CleanerStatusDto
+  ) {
     try {
       const { status, rejected_reason } = updateDto;
 
@@ -1085,7 +1090,9 @@ export class DashboardService {
   --------------------------------------------*/
 
   // get all danger requests with details
-  async getAllDangerRequests(paginationDto: PaginationDto) {
+  async getAllDangerRequests(
+    paginationDto: PaginationDto
+  ) {
     try {
       const page = paginationDto.page || 1;
       const perPage = paginationDto.perPage || 10;
@@ -1161,7 +1168,8 @@ export class DashboardService {
   }
 
   // get danger request by id
-  async getDangerRequestById(id: string) {
+  async getDangerRequestById(
+    id: string) {
     try {
       const danger = await this.prisma.danger.findUnique({
         where: { id },
