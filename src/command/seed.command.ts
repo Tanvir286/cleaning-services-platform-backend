@@ -92,7 +92,7 @@ export class SeedCommand extends CommandRunner {
         await this.prisma.user.deleteMany({
           where: {
             email: {
-              in: ['admin@gmail.com', 'maid@gmail.com', 'homeowner@gmail.com'],
+              in: ['admin@gmail.com', 'cleaner@gmail.com', 'homeowner@gmail.com'],
             },
           },
         });
@@ -115,13 +115,13 @@ export class SeedCommand extends CommandRunner {
 
       // MAID
       await this.prisma.user.upsert({
-        where: { email: 'maid@gmail.com' },
+        where: { email: 'cleaner@gmail.com' },
         update: {},
         create: {
-          name: 'Professional Maid',
-          email: 'maid@gmail.com',
+          name: 'Professional Cleaner',
+          email: 'cleaner@gmail.com',
           password,
-          type: 'MAID',
+          type: 'CLEANER',
           location: 'Dhaka',
           bio: 'Experienced cleaning professional',
           email_verified_at: new Date(),
@@ -247,4 +247,4 @@ export class SeedCommand extends CommandRunner {
 
     await this.prisma.$disconnect();
   }
-}
+} 

@@ -1,2 +1,0 @@
--- AlterEnum
-ALTER TYPE "serviceType" ADD VALUE 'RESIDENTIAL_CLEANING';

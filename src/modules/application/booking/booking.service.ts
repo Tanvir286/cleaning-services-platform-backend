@@ -409,7 +409,10 @@ export class BookingService {
   // get homeowner bookings list
   // * (pending,upcoming,completed,cancelled) status filter
   // service type,package type,price,address,booking date,slot
-  async getAllBookingsWithStatus(userId: string, query: PaginationstausDto) {
+  async getAllBookingsWithStatus(
+    userId: string, 
+    query: PaginationstausDto
+  ) {
     const { page, perPage, bookingStatus } = query;
 
     const skip = (page - 1) * perPage;
@@ -957,13 +960,13 @@ export class BookingService {
           name: booking.user.name,
           location: booking.user.location,
           latitude: booking.user.latitude,
-          longitude: booking.user.longitude,
-          phone: booking.user.phone_number,
           avatar: booking.user.avatar
             ? TanvirStorage.url(
                 appConfig().storageUrl.avatar + '/' + booking.user.avatar,
               )
             : null,
+          longitude: booking.user.longitude,
+          phone: booking.user.phone_number,
         },
       },
     };
@@ -1016,7 +1019,10 @@ export class BookingService {
   }
 
   //  booking status (pending, upcoming, completed, cancelled)
-  async getBookingsByStatusForMaid(maidId: string, query: PaginationstausDto) {
+  async getBookingsByStatusForMaid(
+    maidId: string, 
+    query: PaginationstausDto
+  ) {
     const { page, perPage, bookingStatus } = query;
     const skip = (page - 1) * perPage;
 
@@ -1227,7 +1233,10 @@ export class BookingService {
   // topic:﹝﹝﹝ danger part ﹞﹞﹞
   -----------------------------------------*/
   // create danger booking
-  async createDangerBooking(maidId: string, bookingId: string) {
+  async createDangerBooking(
+    maidId: string, 
+    bookingId: string
+  ) {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
       select: {

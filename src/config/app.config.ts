@@ -4,7 +4,8 @@ export default () => ({
     key: process.env.APP_KEY,
     url: process.env.APP_URL,
     client_app_url: process.env.CLIENT_APP_URL,
-    port: parseInt(process.env.PORT, 10) || 3000,
+    host: process.env.HOST?.trim() || '0.0.0.0',
+    port: parseInt(process.env.PORT ?? '4000', 10) || 4000,
   },
 
   fileSystems: {

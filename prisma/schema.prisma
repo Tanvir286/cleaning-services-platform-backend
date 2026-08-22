@@ -40,6 +40,7 @@ enum UserType {
   ADMIN
   HOMEOWNER
   MAID
+  CLEANER
 }
 
 enum ServiceType {
@@ -62,7 +63,7 @@ model User {
   email      String?   @unique
   address    String?
   password   String?   @db.VarChar(255)
-  type       UserType? @default(MAID)
+  type       UserType? @default(CLEANER)
 
   experience_years Float?  @default(0.0)
   name             String? @db.VarChar(255)
@@ -110,7 +111,7 @@ model User {
 
   // Review & Rating
   homeownerReviews Review[] @relation("HomeownerReviews")
-  maidReviews      Review[] @relation("MaidReviews")
+  cleanerReviews      Review[] @relation("CleanerReviews")
 
   // Booking
   maidBookings Booking[] @relation("MaidBookings")
@@ -124,8 +125,8 @@ model User {
   receivedNotifications Notification[] @relation("notificationReceiver")
   sentNotifications     Notification[] @relation("notificationSender")
 
-  // maid verification
-  maidVerification MaidVerification[] @relation("maidVerification")
+  // cleaner verification
+  cleanerVerification CleanerVerification[] @relation("cleanerVerification")
 
   // others 
   user_payment_methods UserPaymentMethod[]
@@ -153,13 +154,13 @@ enum VerificationStatus {
   REJECTED
 }
 
-model MaidVerification {
+model CleanerVerification {
   id         String   @id @default(cuid())
   created_at DateTime @default(now())
   updated_at DateTime @default(now())
 
   user_id String
-  user    User   @relation("maidVerification", fields: [user_id], references: [id], onDelete: Cascade)
+  user    User   @relation("cleanerVerification", fields: [user_id], references: [id], onDelete: Cascade)
 
   id_card_front String?
   id_card_back  String?
@@ -167,7 +168,7 @@ model MaidVerification {
 
   verified_at DateTime?
 
-  @@map("maid_verifications")
+  @@map("cleaner_verifications")
 }
 
 model Ucode {
@@ -223,9 +224,7 @@ model Location {
  */
 
 enum serviceType {
-  GENERAL_CLEANING
   RESIDENTIAL_CLEANING
-  DEEP_CLEANING
 }
 
 enum PackageType {
@@ -275,44 +274,6 @@ model ResidentialCleaningPackage {
   @@map("residential_cleaning_packages")
 }
 
-model GeneralCleaningPackage {
-  id         String    @id @default(cuid())
-  created_at DateTime  @default(now())
-  updated_at DateTime  @default(now())
-  deleted_at DateTime?
-
-  title       String?
-  serviceType serviceType @default(GENERAL_CLEANING)   
-  packageType PackageType
-  image       String?
-  description String?
-  duration    String?
-  price       Decimal?    @db.Decimal(10, 2)
-
-  booking Booking[] @relation("GeneralCleaningPackageBookings")
-
-  @@map("general_cleaning_packages")
-}
-
-model DeepCleaningPackage {
-  id         String    @id @default(cuid())
-  created_at DateTime  @default(now())
-  updated_at DateTime  @default(now())
-  deleted_at DateTime?
-
-  title       String?
-  serviceType serviceType @default(DEEP_CLEANING)
-  packageType PackageType
-  image       String?
-  description String?
-  duration    String?
-  price       Decimal?    @db.Decimal(10, 2)
-
-  booking Booking[] @relation("DeepCleaningPackageBookings")
-
-  @@map("deep_cleaning_packages")
-}
-
 
 model Commission {
   id         String    @id @default(cuid())
@@ -346,12 +307,6 @@ model Booking {
 
   user_id String
   user    User   @relation("UserBookings", fields: [user_id], references: [id], onDelete: Cascade)
-
-  deep_cleaning_package_id String?
-  deep_cleaning_package    DeepCleaningPackage? @relation("DeepCleaningPackageBookings", fields: [deep_cleaning_package_id], references: [id], onDelete: Cascade)
-
-  general_cleaning_package_id String?
-  general_cleaning_package    GeneralCleaningPackage? @relation("GeneralCleaningPackageBookings", fields: [general_cleaning_package_id], references: [id], onDelete: Cascade)
 
   residential_cleaning_package_id String?
   residential_cleaning_package    ResidentialCleaningPackage? @relation("ResidentialCleaningPackageBookings", fields: [residential_cleaning_package_id], references: [id], onDelete: Cascade)
@@ -480,13 +435,13 @@ model Review {
   homeowner_id String
   homeowner    User   @relation("HomeownerReviews", fields: [homeowner_id], references: [id], onDelete: Cascade)
 
-  maid_id String
-  maid    User   @relation("MaidReviews", fields: [maid_id], references: [id], onDelete: Cascade)
+  cleaner_id String
+  cleaner    User   @relation("CleanerReviews", fields: [cleaner_id], references: [id], onDelete: Cascade)
 
   rating  Int?    @db.SmallInt
   comment String? @db.Text
 
-  @@unique([booking_id, homeowner_id, maid_id])
+  @@unique([booking_id, homeowner_id, cleaner_id])
   @@index([booking_id])
   @@map("reviews")
 }
