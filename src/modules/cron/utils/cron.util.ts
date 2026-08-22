@@ -69,7 +69,7 @@ export async function autoRejectPendingBookings(prisma: PrismaClient) {
             sender_id: 'system',
             receiver_id: userId,
             text: `Your booking (ID: ${booking.id}) has been automatically rejected as the maid did not approve it within 3 hours. The amount of $${amount} has been refunded to your balance.`,
-            type: 'cancel_booking',
+            type: 'cancel booking',
             entity_id: booking.id,
           }).catch((err) => {
             logger.error(`Failed to send auto-reject notification to homeowner ${userId}: ${err.message}`);
@@ -82,7 +82,7 @@ export async function autoRejectPendingBookings(prisma: PrismaClient) {
             sender_id: 'system',
             receiver_id: maidId,
             text: `Booking (ID: ${booking.id}) has been automatically rejected because it was not approved within 3 hours.`,
-            type: 'cancel_booking',
+            type: 'cancel booking',
             entity_id: booking.id,
           }).catch((err) => {
             logger.error(`Failed to send auto-reject notification to maid ${maidId}: ${err.message}`);

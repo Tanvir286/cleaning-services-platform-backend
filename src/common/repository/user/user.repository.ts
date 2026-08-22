@@ -49,6 +49,7 @@ export class UserRepository {
         email: true,
         name: true,
         type: true,
+        email_verified_at: true,
         role_users: {
           include: {
             role: {

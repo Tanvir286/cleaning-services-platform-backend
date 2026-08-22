@@ -712,10 +712,10 @@ export class DashboardService {
     try {
       const { status } = updateDto as any;
 
-      if (status !== 'VERIFIED' && status !== 'REJECTED') {
+      if (status !== BookingStatus.COMPLETED && status !== BookingStatus.REJECTED) {
         return {
           success: false,
-          message: 'Status must be VERIFIED or REJECTED',
+          message: 'Status must be COMPLETED or REJECTED',
         };
       }
 
@@ -738,7 +738,7 @@ export class DashboardService {
       }
 
       // Approve - Transfer amount to maid and record transaction
-      if (status === 'VERIFIED') {
+      if (status === BookingStatus.COMPLETED) {
         const maidId = existingBooking.maid_id;
         const amount = Number(existingBooking.total_price ?? 0);
 
@@ -848,7 +848,9 @@ export class DashboardService {
   --------------------------------------------*/
 
   // get all cleaner requests with details
-  async getAllCleanerRequests(paginationDto: PaginationDto) {
+  async getAllCleanerRequests(
+    paginationDto: PaginationDto
+  ) {
     try {
       const page = paginationDto.page || 1;
       const perPage = paginationDto.perPage || 10;
@@ -890,6 +892,8 @@ export class DashboardService {
                 status: true,
                 id_card_front: true,
                 id_card_back: true,
+                resume: true,
+                rejected_reason: true,
               },
             },
           },
@@ -906,6 +910,7 @@ export class DashboardService {
         location: item.location || 'N/A',
         applied_date: item.maidVerification[0]?.created_at || null,
         status: item.maidVerification[0]?.status?.toLowerCase() || 'pending',
+        rejected_reason: item.maidVerification[0]?.rejected_reason || null,
       }));
 
       return {
@@ -950,6 +955,8 @@ export class DashboardService {
               status: true,
               id_card_front: true,
               id_card_back: true,
+              resume: true,
+              rejected_reason: true,
             },
           },
         },
@@ -978,6 +985,7 @@ export class DashboardService {
         phone_number: cleaner.phone_number,
         location: cleaner.location || 'N/A',
         status: verification.status?.toLowerCase() || 'pending',
+        rejected_reason: verification.rejected_reason || null,
         id_card_front_url: verification.id_card_front
           ? TanvirStorage.url(
               appConfig().storageUrl.maidverification +
@@ -990,6 +998,13 @@ export class DashboardService {
               appConfig().storageUrl.maidverification +
                 '/' +
                 verification.id_card_back,
+            )
+          : null,
+        resume_url: verification.resume
+          ? TanvirStorage.url(
+              appConfig().storageUrl.maidResume +
+                '/' +
+                verification.resume,
             )
           : null,
       };
@@ -1008,9 +1023,12 @@ export class DashboardService {
   }
 
   // approve or reject cleaner request by id
-  async updateCleanerRequestById(id: string, updateDto: CleanerStatusDto) {
+  async updateCleanerRequestById(
+    id: string, 
+    updateDto: CleanerStatusDto
+  ) {
     try {
-      const { status } = updateDto;
+      const { status, rejected_reason } = updateDto;
 
       if (status !== 'VERIFIED' && status !== 'REJECTED') {
         return {
@@ -1039,13 +1057,14 @@ export class DashboardService {
         where: { id: verification.id },
         data: {
           status,
+          rejected_reason: status === 'REJECTED' ? (rejected_reason || null) : null,
           verified_at: status === 'VERIFIED' ? new Date() : null,
         },
       });
 
       await sendAdminNotification({
         sender_id: 'system',
-        text: `Your cleaner verification request has been ${status.toLowerCase()}.`,
+        text: `Your cleaner verification request has been ${status.toLowerCase()}.${status === 'REJECTED' && rejected_reason ? ` Reason: ${rejected_reason}` : ''}`,
         type: 'cleaner_verification_update',
         entity_id: id,
       });
@@ -1071,7 +1090,9 @@ export class DashboardService {
   --------------------------------------------*/
 
   // get all danger requests with details
-  async getAllDangerRequests(paginationDto: PaginationDto) {
+  async getAllDangerRequests(
+    paginationDto: PaginationDto
+  ) {
     try {
       const page = paginationDto.page || 1;
       const perPage = paginationDto.perPage || 10;
@@ -1147,7 +1168,8 @@ export class DashboardService {
   }
 
   // get danger request by id
-  async getDangerRequestById(id: string) {
+  async getDangerRequestById(
+    id: string) {
     try {
       const danger = await this.prisma.danger.findUnique({
         where: { id },

@@ -42,7 +42,7 @@ export class MessageController {
     FilesInterceptor('attachments', 10, {
       storage: memoryStorage(),
       limits: {
-        fileSize: 10 * 1024 * 1024, 
+        fileSize: 50 * 1024 * 1024, 
       },
     }),
   )

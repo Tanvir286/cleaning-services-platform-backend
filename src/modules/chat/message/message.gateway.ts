@@ -47,41 +47,45 @@ export class MessageGateway
     console.log('Websocket server started');
   }
 
-  async handleConnection(client: Socket, ...args: any[]) {
-    try {
-      const authHeader = client.handshake.headers.authorization;
+ async handleConnection(client: Socket, ...args: any[]) {
+  try {
+    const authHeader = client.handshake.headers.authorization?.toString();
 
-      if (!authHeader) {
-        client.disconnect();
-        return;
-      }
+    const token =
+      (client.handshake.auth?.token as string) ||
+      authHeader?.replace(/^Bearer\s+/i, "") ||
+      (client.handshake.query?.token as string) ||
+      "";
 
-      const token = authHeader.split(' ')[1];
-
-      if (!token) {
-        client.disconnect();
-        return;
-      }
-
-      const decoded: any = jwt.verify(token, appConfig().jwt.secret);
-
-      const { sub: userId } = decoded;
-
-      if (!userId) {
-        client.disconnect();
-        return;
-      }
-
-      this.clients.set(userId, client.id);
-
-      client.join(`user_${userId}`);
-
-      console.log(`User joined room: user_${userId}`);
-    } catch (error: any) {
-      console.error('Error handling connection:', error.message);
+    if (!token) {
+      console.error("Socket auth failed: no token");
       client.disconnect();
+      return;
     }
+
+    const decoded: any = jwt.verify(token, appConfig().jwt.secret);
+
+    const userId =
+      decoded.sub ||
+      decoded.userId ||
+      decoded.id ||
+      decoded._id;
+
+    if (!userId) {
+      console.error("Socket auth failed: missing user id in token");
+      client.disconnect();
+      return;
+    }
+
+    this.clients.set(String(userId), client.id);
+    client.join(`user_${userId}`);
+
+    console.log(`User joined room: user_${userId}`);
+  } catch (error: any) {
+    console.error("Socket auth failed:", error.message);
+    client.disconnect();
   }
+}
 
   async handleDisconnect(client: Socket) {
     const userId = [...this.clients.entries()].find(

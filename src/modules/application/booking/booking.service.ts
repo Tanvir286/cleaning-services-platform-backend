@@ -32,6 +32,26 @@ import {
   sendAdminNotification,
   sendUserNotification,
 } from 'src/common/utils/notification.util';
+import { GetAvailableMaidsDto } from './dto/get-available-maids.dto';
+
+function getHaversineDistanceKm(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 @Injectable()
 export class BookingService {
@@ -41,43 +61,82 @@ export class BookingService {
   // topic:﹝﹝﹝ available maid and  maid deatils ﹞﹞﹞
   --------------------------------------------------*/
 
-  // available maids list
-  async getAvailableMaids(paginationDto: PaginationDto) {
-    const { page, perPage } = paginationDto;
-    const skip = (page - 1) * perPage;
+  // available maids list within 40km range
+  async getAvailableMaids(userId: string, queryDto?: GetAvailableMaidsDto) {
+    const page = Number(queryDto?.page) || 1;
+    const perPage = Number(queryDto?.perPage) || 10;
 
-    const whereCondition: any = {
-      type: UserType.MAID,
-      availability: true,
+    let lat = queryDto?.latitude != null ? Number(queryDto.latitude) : null;
+    let lng = queryDto?.longitude != null ? Number(queryDto.longitude) : null;
 
-      maidVerification: {
-        some: {
-          status: VerificationStatus.VERIFIED,
+    if (lat === null || isNaN(lat) || lng === null || isNaN(lng)) {
+      const homeowner = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { latitude: true, longitude: true },
+      });
+
+      if (!homeowner) {
+        throw new NotFoundException('Homeowner not found');
+      }
+
+      lat = homeowner.latitude;
+      lng = homeowner.longitude;
+    }
+
+    if (lat === null || lat === undefined || lng === null || lng === undefined) {
+      throw new BadRequestException(
+        'Homeowner latitude and longitude are missing. Please provide latitude & longitude in query parameters or update your profile location in database.',
+      );
+    }
+
+    const maids = await this.prisma.user.findMany({
+      where: {
+        type: UserType.MAID,
+        availability: true,
+        latitude: { not: null },
+        longitude: { not: null },
+        maidVerification: {
+          some: {
+            status: VerificationStatus.VERIFIED,
+          },
         },
       },
-    };
+      select: {
+        id: true,
+        name: true,
+        avatar: true,
+        location: true,
+        latitude: true,
+        longitude: true,
+        experience_years: true,
+        service_type: true,
+      },
+    });
 
-    const [total, maids] = await this.prisma.$transaction([
-      this.prisma.user.count({ where: whereCondition }),
-      this.prisma.user.findMany({
-        where: whereCondition,
-        select: {
-          id: true,
-          name: true,
-          avatar: true,
-          location: true,
-          experience_years: true,
-          service_type: true,
-        },
-        skip,
-        take: perPage,
-      }),
-    ]);
+    const maidsWithDistance = maids
+      .map((maid) => {
+        const distance_km = getHaversineDistanceKm(
+          lat,
+          lng,
+          maid.latitude,
+          maid.longitude,
+        );
+        return {
+          ...maid,
+          distance_km: Number(distance_km.toFixed(2)),
+        };
+      })
+      .filter((maid) => maid.distance_km <= 40)
+      .sort((a, b) => a.distance_km - b.distance_km);
+
+    const total = maidsWithDistance.length;
+    const skip = (page - 1) * perPage;
+    const paginatedMaids = maidsWithDistance.slice(skip, skip + perPage);
 
     const reviews = await this.prisma.review.groupBy({
       by: ['maid_id'],
       where: {
-        maid_id: { in: maids.map((maid) => maid.id) },
+        maid_id: { in: paginatedMaids.map((maid) => maid.id) },
       },
       _avg: {
         rating: true,
@@ -101,7 +160,7 @@ export class BookingService {
       success: true,
       message: 'Available maids retrieved successfully',
       data: paginateResponse(
-        maids.map((maid) => ({
+        paginatedMaids.map((maid) => ({
           id: maid.id,
           name: maid.name,
           avatar: maid.avatar
@@ -110,6 +169,9 @@ export class BookingService {
               )
             : null,
           location: maid.location,
+          latitude: maid.latitude,
+          longitude: maid.longitude,
+          distance_km: maid.distance_km,
           experience_years: maid.experience_years,
           service_type: maid.service_type,
           average_rating: reviewMap.get(maid.id)?.average_rating ?? 0,
@@ -165,10 +227,10 @@ export class BookingService {
     }
 
     const slotTimeMap = {
-      A: { start: '07:30', end: '10:00' },
-      B: { start: '11:00', end: '01:30' },
-      C: { start: '01:30', end: '04:00' },
-      D: { start: '04:00', end: '07:30' },
+      A: { start: '8:00', end: '12:00' },
+      B: { start: '12:00', end: '04:00' },
+      C: { start: '04:00', end: '08:00' },
+      D: { start: '08:00', end: '12:00' },
     };
 
     const totalDays = endDate.getDate();
@@ -214,10 +276,8 @@ export class BookingService {
 
   // create booking
   async create(userId: string, dto: CreateBookingDto) {
-    
     const { maid_id, package_id, booking_date, slot, address } = dto;
 
-  
     const maid_location = await this.prisma.user.findUnique({
       where: { id: maid_id },
       select: { location: true, latitude: true, longitude: true },
@@ -235,7 +295,8 @@ export class BookingService {
       throw new BadRequestException('Maid location is not available');
     }
 
-    const { findlocation_name, findlatitude, findlongitude } = await findAddress(this.prisma, address);
+    const { findlocation_name, findlatitude, findlongitude } =
+      await findAddress(this.prisma, address);
 
     const maidLocationValue = maid_location?.location ?? '';
     const maidLatitude = maid_location?.latitude;
@@ -331,7 +392,9 @@ export class BookingService {
             ...(packageData.residential_cleaning_package_id
               ? {
                   residential_cleaning_package: {
-                    connect: { id: packageData.residential_cleaning_package_id },
+                    connect: {
+                      id: packageData.residential_cleaning_package_id,
+                    },
                   },
                 }
               : {}),
@@ -364,12 +427,24 @@ export class BookingService {
       );
     }
 
+    await sendUserNotification({
+      sender_id: userId,
+      receiver_id: maid_id,
+      text: `New booking created by ${booking.user.name} for ${booking.maid.name} on ${formatBookingDate(booking.booking_date)}.`,
+      type: 'create booking',
+      entity_id: booking.id,
+    });
+
     await sendAdminNotification({
       sender_id: userId,
       text: `New booking created by ${booking.user.name} for ${booking.maid.name} on ${formatBookingDate(booking.booking_date)}.`,
-      type: 'create_booking',
+      type: 'create booking',
       entity_id: booking.id,
     });
+
+   
+
+
 
     const formatPackage = (
       pkg:
@@ -449,13 +524,15 @@ export class BookingService {
 
     const formattedBookings = bookings.map((booking) => {
       const packageData =
-        booking.general_cleaning_package || booking.deep_cleaning_package || booking.residential_cleaning_package;
+        booking.general_cleaning_package ||
+        booking.deep_cleaning_package ||
+        booking.residential_cleaning_package;
 
       const serviceType = booking.general_cleaning_package
         ? 'General Cleaning'
         : booking.deep_cleaning_package
-        ? 'Deep Cleaning'
-        : 'Residential Cleaning';
+          ? 'Deep Cleaning'
+          : 'Residential Cleaning';
 
       const slotTime = bookingSlotTimeMap[booking.slot];
 
@@ -524,13 +601,15 @@ export class BookingService {
     }
 
     const packageData =
-      booking.general_cleaning_package || booking.deep_cleaning_package || booking.residential_cleaning_package;
+      booking.general_cleaning_package ||
+      booking.deep_cleaning_package ||
+      booking.residential_cleaning_package;
 
     const serviceType = booking.general_cleaning_package
       ? 'General Cleaning'
       : booking.deep_cleaning_package
-      ? 'Deep Cleaning'
-      : 'Residential Cleaning';
+        ? 'Deep Cleaning'
+        : 'Residential Cleaning';
 
     const slotTime = bookingSlotTimeMap[booking.slot];
 
@@ -552,6 +631,8 @@ export class BookingService {
         maid_longitude: booking.maid_longitude,
         homeowner_latitude: booking.homeowner_latitude,
         homeowner_longitude: booking.homeowner_longitude,
+        start_time: booking.start_time,
+        end_time: booking.end_time,
         date_time: `${formatBookingDate(booking.booking_date)}, at ${slotTime.start} - ${slotTime.end}`,
         price: booking.total_price ? `$${booking.total_price}` : null,
         package_details: {
@@ -564,7 +645,7 @@ export class BookingService {
                 appConfig().storageUrl.package + '/' + packageData.image,
               )
             : null,
-           price: packageData?.price ? `$${packageData.price}` : null, 
+          price: packageData?.price ? `$${packageData.price}` : null,
           duration: packageData?.duration,
         },
         maid: {
@@ -585,6 +666,12 @@ export class BookingService {
         },
         status: booking.status,
         cancle_reason: booking.cancle_reason ?? null,
+        before_photos_url: (booking.before_photos as string[])?.map((fileName) =>
+          TanvirStorage.url(`${appConfig().storageUrl.booking}/${fileName}`),
+        ) ?? [],
+        after_photos_url: (booking.after_photos as string[])?.map((fileName) =>
+          TanvirStorage.url(`${appConfig().storageUrl.booking}/${fileName}`),
+        ) ?? [],
       },
     };
   }
@@ -648,7 +735,7 @@ export class BookingService {
       sender_id: userId,
       receiver_id: booking.maid_id,
       text: `Booking cancelled by homeowner for ${booking.id} on ${formatBookingDate(booking.booking_date)}. Reason: ${cancle_reason}`,
-      type: 'cancel_booking',
+      type: 'cancel booking',
       entity_id: booking.id,
     });
 
@@ -766,10 +853,10 @@ export class BookingService {
     ];
 
     const slotDurationByHours = {
-      A: 2.5,
-      B: 2.5,
-      C: 2.5,
-      D: 3.5,
+      A: 4,
+      B: 4,
+      C: 4,
+      D: 4,
     } as const;
 
     const jobsByDay = Array(7).fill(0);
@@ -856,12 +943,14 @@ export class BookingService {
 
     const formattedBookings = bookings.map((booking) => {
       const packageData =
-        booking.general_cleaning_package || booking.deep_cleaning_package || booking.residential_cleaning_package;
+        booking.general_cleaning_package ||
+        booking.deep_cleaning_package ||
+        booking.residential_cleaning_package;
       const serviceType = booking.general_cleaning_package
         ? 'General Cleaning'
         : booking.deep_cleaning_package
-        ? 'Deep Cleaning'
-        : 'Residential Cleaning';
+          ? 'Deep Cleaning'
+          : 'Residential Cleaning';
       const slotTime = bookingSlotTimeMap[booking.slot];
 
       return {
@@ -919,12 +1008,14 @@ export class BookingService {
     }
 
     const packageData =
-      booking.general_cleaning_package || booking.deep_cleaning_package || booking.residential_cleaning_package;
+      booking.general_cleaning_package ||
+      booking.deep_cleaning_package ||
+      booking.residential_cleaning_package;
     const serviceType = booking.general_cleaning_package
       ? 'General Cleaning'
       : booking.deep_cleaning_package
-      ? 'Deep Cleaning'
-      : 'Residential Cleaning';
+        ? 'Deep Cleaning'
+        : 'Residential Cleaning';
     const slotTime = bookingSlotTimeMap[booking.slot];
 
     return {
@@ -932,6 +1023,9 @@ export class BookingService {
       message: 'Booking details retrieved successfully',
       data: {
         id: booking.id,
+        status: booking.status,
+        start_time: booking.start_time,
+        end_time: booking.end_time,
         service: serviceType,
         package: packageData?.packageType,
         slot: booking.slot,
@@ -968,6 +1062,12 @@ export class BookingService {
           longitude: booking.user.longitude,
           phone: booking.user.phone_number,
         },
+        before_photos_url: (booking.before_photos as string[])?.map((fileName) =>
+          TanvirStorage.url(`${appConfig().storageUrl.booking}/${fileName}`),
+        ) ?? [],
+        after_photos_url: (booking.after_photos as string[])?.map((fileName) =>
+          TanvirStorage.url(`${appConfig().storageUrl.booking}/${fileName}`),
+        ) ?? [],
       },
     };
   }
@@ -1006,8 +1106,8 @@ export class BookingService {
       sender_id: maidId,
       text: `Booking ${status.toLowerCase()} by maid for ${booking.id} on ${formatBookingDate(booking.booking_date)}.`,
       type: (status === BookingStatus.CONFIRMED
-        ? 'accept_booking'
-        : 'reject_booking') as any,
+        ? 'accept booking'
+        : 'reject booking') as any,
       entity_id: booking.id,
     });
 
@@ -1063,7 +1163,9 @@ export class BookingService {
     const formattedBookings = await Promise.all(
       bookings.map(async (booking) => {
         const packageData =
-          booking.general_cleaning_package || booking.deep_cleaning_package || booking.residential_cleaning_package;
+          booking.general_cleaning_package ||
+          booking.deep_cleaning_package ||
+          booking.residential_cleaning_package;
         const slotTime = bookingSlotTimeMap[booking.slot];
 
         const aggregateRating = await this.prisma.review.aggregate({
@@ -1080,8 +1182,8 @@ export class BookingService {
           service: booking.general_cleaning_package
             ? 'General Cleaning'
             : booking.deep_cleaning_package
-            ? 'Deep Cleaning'
-            : 'Residential Cleaning',
+              ? 'Deep Cleaning'
+              : 'Residential Cleaning',
           package: packageData?.packageType,
           package_image: packageData?.image
             ? TanvirStorage.url(
@@ -1101,7 +1203,7 @@ export class BookingService {
           cancle_reason: booking.cancle_reason ?? null,
           homeowner: {
             id: booking.user.id,
-            name: booking.user.name,  
+            name: booking.user.name,
             location: booking.user.location,
             avatar: booking.user.avatar
               ? TanvirStorage.url(
@@ -1157,13 +1259,13 @@ export class BookingService {
 
     const updatedBooking = await this.prisma.booking.update({
       where: { id: bookingId },
-      data: { status },
+      data: { status, start_time: new Date() },
     });
 
     await sendAdminNotification({
       sender_id: maidId,
       text: `Booking started by maid for ${booking.id} on ${formatBookingDate(booking.booking_date)}.`,
-      type: 'started_booking',
+      type: 'started booking',
       entity_id: booking.id,
     });
 
@@ -1211,7 +1313,15 @@ export class BookingService {
         status: status,
         before_photos: uploadedBeforePhotos,
         after_photos: uploadedAfterPhotos,
+        end_time: new Date(),
       },
+    });
+
+    await sendUserNotification({
+      receiver_id: booking.user_id,
+      text: `Booking completed successfully for ${booking.id} on ${formatBookingDate(booking.booking_date)}.`,
+      type: 'complete_booking',
+      entity_id: booking.id,
     });
 
     return {
@@ -1233,63 +1343,24 @@ export class BookingService {
   // topic:﹝﹝﹝ danger part ﹞﹞﹞
   -----------------------------------------*/
   // create danger booking
+<<<<<<< HEAD
   async createDangerBooking(
     maidId: string, 
     bookingId: string
   ) {
+=======
+  async createDangerBooking(maidId: string, bookingId: string,dangerDto:DangerDto) {
+   
+     const {lat,lng} = dangerDto; 
+   
+>>>>>>> 011035acf0b9aeb0f00a3b486d2c504bc81290dd
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
       select: {
         id: true,
         maid_id: true,
-        homeowner_location: true,
         booking_date: true,
-
-        danger_notification: {
-          select: {
-            id: true,
-            booking_id: true,
-            user_id: true,
-            latitude: true,
-            longitude: true,
-            created_at: true,
-          },
-        },
-
-        live_locations: {
-          where: {
-            user_id: maidId,
-          },
-          orderBy: {
-            updated_at: 'desc',
-          },
-          take: 1,
-          select: {
-            latitude: true,
-            longitude: true,
-            updated_at: true,
-          },
-        },
-
-        booking_destinations: {
-          where: {
-            user_id: maidId,
-          },
-          orderBy: {
-            updated_at: 'desc',
-          },
-          take: 1,
-          select: {
-            pickup_lat: true,
-            pickup_lng: true,
-            dropoff_lat: true,
-            dropoff_lng: true,
-            distance_km: true,
-            distance_text: true,
-            duration_min: true,
-          },
-        },
-      },
+      }
     });
 
     if (!booking) {
@@ -1302,39 +1373,17 @@ export class BookingService {
       );
     }
 
-    const latestLiveLocation = booking.live_locations[0];
-
-    if (!latestLiveLocation) {
-      throw new NotFoundException('Live location not found for this booking');
-    }
-
-    const destination = booking.booking_destinations[0] ?? null;
-
-    if (booking.danger_notification) {
-      return {
-        success: true,
-        message: 'Danger alert already exists for this booking',
-        data: {
-          danger: booking.danger_notification,
-          maid_live_location: latestLiveLocation,
-          destination,
-        },
-      };
-    }
-
     const danger = await this.prisma.danger.create({
       data: {
         booking_id: booking.id,
         user_id: maidId,
-        maid_current_location: booking.homeowner_location,
-        latitude: latestLiveLocation.latitude,
-        longitude: latestLiveLocation.longitude,
+        latitude: lat,
+        longitude: lng,
       },
       select: {
         id: true,
         booking_id: true,
         user_id: true,
-        maid_current_location: true,
         latitude: true,
         longitude: true,
         created_at: true,
@@ -1344,7 +1393,7 @@ export class BookingService {
     await sendAdminNotification({
       sender_id: maidId,
       text: `Danger alert reported by maid for ${booking.id} on ${formatBookingDate(booking.booking_date)}.`,
-      type: 'danger_request',
+      type: 'danger request',
       entity_id: booking.id,
     });
 
@@ -1353,8 +1402,8 @@ export class BookingService {
       message: 'Danger alert created successfully',
       data: {
         danger,
-        maid_live_location: latestLiveLocation,
-        destination,
+        maid_live_location: {lat,lng},
+     
       },
     };
   }

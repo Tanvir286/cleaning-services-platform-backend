@@ -38,10 +38,10 @@ export async function findAddress(
 
 // Define the time slots for booking
 export const bookingSlotTimeMap: Record<BookingSlot, { start: string; end: string }> = {
-  A: { start: '07:30am', end: '10:00am' },
-  B: { start: '11:00am', end: '01:30pm' },
-  C: { start: '01:30pm', end: '04:00pm' },
-  D: { start: '04:00pm', end: '07:30pm' },
+  A: { start: '08:00am', end: '12:00am' },
+  B: { start: '12:00am', end: '04:00pm' },
+  C: { start: '04:00pm', end: '08:00pm' },
+  D: { start: '08:00pm', end: '12:00pm' },
 };
 
 // Function to format booking date
@@ -186,3 +186,5 @@ export async function checkCommission(
     amount,
   };
 }
+
+

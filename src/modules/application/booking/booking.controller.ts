@@ -33,6 +33,8 @@ import { StartedBookingDto } from './dto/started-booking.dto';
 import { DangerDto } from './dto/danger.dto';
 import { SubmittedBookingDto } from './dto/submittted-booking.dto';
 
+import { GetAvailableMaidsDto } from './dto/get-available-maids.dto';
+
 @ApiTags('Booking')
 @Controller('booking')
 export class BookingController {
@@ -42,10 +44,16 @@ export class BookingController {
   // topic:﹝﹝﹝ available maid and  maid deatils ﹞﹞﹞
   --------------------------------------------------*/
 
-  // available maids list
+  // available maids list within 40km range
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.HOMEOWNER)
   @Get('available-maidlist')
-  async getAvailableMaids(@Query() paginationDto: PaginationDto) {
-    return this.bookingService.getAvailableMaids(paginationDto);
+  async getAvailableMaids(
+    @Req() req,
+    @Query() queryDto: GetAvailableMaidsDto,
+  ) {
+    const userId = req.user.userId;
+    return this.bookingService.getAvailableMaids(userId, queryDto);
   }
 
   // maid individual details slot
@@ -215,7 +223,7 @@ export class BookingController {
       ],
       {
         storage: memoryStorage(),
-        limits: { fileSize: 5 * 1024 * 1024 },
+        limits: { fileSize: 50 * 1024 * 1024 },
       },
     ),
   )
@@ -250,9 +258,10 @@ export class BookingController {
   @Post('maid/create-danger/:id')
   async createDangerBooking(
     @Req() req, 
-    @Param('id') id: string
+    @Param('id') id: string,
+    @Body() dangerDto: DangerDto
   ) {
     const maidId = req.user.userId;
-    return this.bookingService.createDangerBooking(maidId, id);
+    return this.bookingService.createDangerBooking(maidId, id, dangerDto);
   }
 }

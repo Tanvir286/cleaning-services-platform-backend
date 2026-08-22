@@ -37,6 +37,24 @@ import { FirebaseAuthDto } from './dto/firebase-auth.dto';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+
+  // active deactive
+
+  @UseGuards(JwtAuthGuard)
+  @Get('active-deactive')
+  async activeDeactive(@Req() req: Request) {
+    try {
+      const user_id = req.user.userId;
+      const response = await this.authService.activeDeactive(user_id);
+      return response;
+    } catch (error: any) {
+      return {
+        success: false,
+        message: 'Failed to active deactive',
+      };
+    }
+  }
+
   // *get user details
   @UseGuards(JwtAuthGuard)
   @Get('me')
@@ -109,7 +127,6 @@ export class AuthController {
       };
     }
   }
-
   // *login user
   @UseGuards(LocalAuthGuard)
   @Post('login')
@@ -150,7 +167,7 @@ export class AuthController {
   @UseInterceptors(
     FileInterceptor('image', {
       storage: memoryStorage(),
-      limits: { fileSize: 5 * 1024 * 1024 },
+      limits: { fileSize: 50 * 1024 * 1024 },
     }),
   )
   async updateUser(
@@ -366,11 +383,12 @@ export class AuthController {
       [
         { name: 'front_page', maxCount: 1 },
         { name: 'back_page', maxCount: 1 },
+        { name: 'resume', maxCount: 1 },
       ],
       {
         storage: memoryStorage(),
         limits: {
-          fileSize: 5 * 1024 * 1024,
+          fileSize: 50 * 1024 * 1024,
         },
       },
     ),
@@ -381,17 +399,19 @@ export class AuthController {
     files: {
       front_page?: Express.Multer.File[];
       back_page?: Express.Multer.File[];
+      resume?: Express.Multer.File[];
     },
   ) {
     try {
       const user_id = req.user.userId;
       const frontPageImage = files?.front_page ? files.front_page[0] : null;
       const backImage = files?.back_page ? files.back_page[0] : null;
-
+      const resume = files?.resume ? files.resume[0] : null;
       const response = await this.authService.submitVerification(
         user_id,
         frontPageImage,
         backImage,
+        resume,
       );
 
       return response;
@@ -424,6 +444,11 @@ export class AuthController {
   // topic: maid Verification Part End ---------->
   -----------------------------------------------*/
 
+  /*----------------------------------------------
+  // topic: resume upload start ------------------>
+  -----------------------------------------------*/
+  
+ 
   //-----------------------------------------------(end)----------------------------------------------------------------------
 
   @ApiOperation({ summary: 'Refresh token' })

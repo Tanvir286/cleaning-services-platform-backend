@@ -140,9 +140,9 @@ export class DashboardController {
   @Patch('cleaners/request/:id')
   async updateCleanerRequestById(
     @Param('id') id: string,
-    @Body() CleanerStatusDto: CleanerStatusDto,
+    @Body() cleanerStatusDto: CleanerStatusDto,
   ) {
-    return this.dashboardService.updateCleanerRequestById(id, CleanerStatusDto);
+    return this.dashboardService.updateCleanerRequestById(id, cleanerStatusDto);
   }
 
   /*--------------------------------------------

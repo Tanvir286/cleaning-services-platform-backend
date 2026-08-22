@@ -51,6 +51,7 @@ export class ProfileService {
         type: true,
         avatar: true,
         location: true,
+        phone_number: true,
         about_me: true,
         service_type: true,
         latitude: true,
@@ -193,6 +194,7 @@ export class ProfileService {
           : null,
         location: user.location,
         about_me: user.about_me,
+        phone_number: user.phone_number,
         service_type: user.service_type,
         experience_years: user.experience_years,
         jobs_done: jobsDone,
@@ -217,6 +219,7 @@ export class ProfileService {
         id: true,
         name: true,
         email: true,
+        phone_number: true,
         type: true,
         avatar: true,
         location: true,
@@ -229,6 +232,7 @@ export class ProfileService {
           select: {
             status: true,
             verified_at: true,
+            rejected_reason: true,
           },
         },
       },
@@ -361,10 +365,12 @@ export class ProfileService {
           : null,
         location: user.location,
         about_me: user.about_me,
+        phone_number: user.phone_number,
         service_type: user.service_type,
         experience_years: user.experience_years,
         verification_status: user.maidVerification?.[0]?.status || 'PENDING',
         verified_at: user.maidVerification?.[0]?.verified_at || null,
+        rejected_reason: user.maidVerification?.[0]?.rejected_reason || null,
         jobs_done: jobsDone,
         total_earnings,
         repeat_client_rate,
@@ -386,6 +392,7 @@ export class ProfileService {
 
     if (dto.name !== undefined) userData.name = dto.name;
     if (dto.location !== undefined) userData.location = dto.location;
+    if (dto.phone_number !== undefined) userData.phone_number = dto.phone_number;
     if (dto.about_me !== undefined) userData.about_me = dto.about_me;
     if (dto.service_type !== undefined)
       userData.service_type = dto.service_type;
@@ -452,7 +459,7 @@ export class ProfileService {
       sender_id: userId,
       receiver_id: userId,
       text: `Your profile has been updated successfully.`,
-      type: 'profile_update',
+      type: 'profile update',
       entity_id: userId,
     });
 
@@ -551,6 +558,7 @@ export class ProfileService {
         email: true,
         avatar: true,
         location: true,
+        phone_number: true,
         about_me: true,
         latitude: true,
         longitude: true,
@@ -573,6 +581,7 @@ export class ProfileService {
           ? TanvirStorage.url(appConfig().storageUrl.avatar + '/' + user.avatar)
           : null,
         location: user.location,
+        phone_number: user.phone_number,
         about_me: user.about_me,
         latitude: user.latitude,
         longitude: user.longitude,
@@ -589,6 +598,7 @@ export class ProfileService {
     const userData: any = {};
 
     if (dto.location !== undefined) userData.location = dto.location;
+    if (dto.phone_number !== undefined) userData.phone_number = dto.phone_number;
     if (dto.about_me !== undefined) userData.about_me = dto.about_me;
     if (dto.latitude !== undefined) userData.latitude = dto.latitude;
     if (dto.longitude !== undefined) userData.longitude = dto.longitude;
@@ -626,6 +636,7 @@ export class ProfileService {
               id: true,
               name: true,
               email: true,
+              phone_number: true,
               avatar: true,
               location: true,
               about_me: true,
@@ -647,7 +658,7 @@ export class ProfileService {
       sender_id: userId,
       receiver_id: userId,
       text: `Your profile has been updated successfully.`,
-      type: 'profile_update',
+      type: 'profile update',
       entity_id: userId,
     });
 
@@ -693,7 +704,7 @@ export class ProfileService {
       sender_id: userId,
       receiver_id: userId,
       text: `Your location has been saved successfully.`,
-      type: 'profile_update',
+      type: 'profile update',
       entity_id: userId,
     });
 
@@ -821,4 +832,12 @@ export class ProfileService {
       message: 'Location deleted successfully',
     };
   }
+
+
 }
+
+
+
+
+
+  

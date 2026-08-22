@@ -1,22 +1,19 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
 
 
 export class DangerDto {
- 
-@IsNotEmpty()
-  @IsString()
-  lat: string;
 
   @IsNotEmpty()
-  @IsString()
-  lng: string;
+  @IsNumber()
+  @Type(() => Number)
+  lat: number;
 
   @IsNotEmpty()
-  @IsString()
-  booking_id: string; 
-
- 
+  @IsNumber()
+  @Type(() => Number)
+  lng: number;
 
 }
 
