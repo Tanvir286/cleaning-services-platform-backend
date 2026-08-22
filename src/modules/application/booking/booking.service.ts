@@ -95,7 +95,7 @@ export class BookingService {
         availability: true,
         latitude: { not: null },
         longitude: { not: null },
-        maidVerification: {
+        cleanerVerification: {
           some: {
             status: VerificationStatus.VERIFIED,
           },
@@ -134,9 +134,9 @@ export class BookingService {
     const paginatedMaids = maidsWithDistance.slice(skip, skip + perPage);
 
     const reviews = await this.prisma.review.groupBy({
-      by: ['maid_id'],
+      by: ['cleaner_id'],
       where: {
-        maid_id: { in: paginatedMaids.map((maid) => maid.id) },
+        cleaner_id: { in: paginatedMaids.map((maid) => maid.id) },
       },
       _avg: {
         rating: true,
@@ -148,7 +148,7 @@ export class BookingService {
 
     const reviewMap = new Map(
       reviews.map((review) => [
-        review.maid_id,
+        review.cleaner_id,
         {
           average_rating: Number((review._avg.rating ?? 0).toFixed(1)),
           total_reviews: review._count.rating,
@@ -375,20 +375,7 @@ export class BookingService {
             status: 'PENDING',
             revenue: commissionAmount,
             total_price: packageData.total_price ?? null,
-            ...(packageData.general_cleaning_package_id
-              ? {
-                  general_cleaning_package: {
-                    connect: { id: packageData.general_cleaning_package_id },
-                  },
-                }
-              : {}),
-            ...(packageData.deep_cleaning_package_id
-              ? {
-                  deep_cleaning_package: {
-                    connect: { id: packageData.deep_cleaning_package_id },
-                  },
-                }
-              : {}),
+
             ...(packageData.residential_cleaning_package_id
               ? {
                   residential_cleaning_package: {
@@ -414,8 +401,6 @@ export class BookingService {
                 email: true,
               },
             },
-            general_cleaning_package: true,
-            deep_cleaning_package: true,
             residential_cleaning_package: true,
           },
         });
@@ -447,10 +432,7 @@ export class BookingService {
 
 
     const formatPackage = (
-      pkg:
-        | typeof booking.general_cleaning_package
-        | typeof booking.deep_cleaning_package
-        | typeof booking.residential_cleaning_package,
+      pkg: typeof booking.residential_cleaning_package,
     ) => {
       if (!pkg) return null;
       return {
@@ -470,10 +452,6 @@ export class BookingService {
           percentage: commissionPercentage,
           amount: commissionAmount,
         },
-        general_cleaning_package: formatPackage(
-          booking.general_cleaning_package,
-        ),
-        deep_cleaning_package: formatPackage(booking.deep_cleaning_package),
         residential_cleaning_package: formatPackage(
           booking.residential_cleaning_package,
         ),
@@ -504,8 +482,6 @@ export class BookingService {
         where: whereClause,
         include: {
           maid: true,
-          general_cleaning_package: true,
-          deep_cleaning_package: true,
           residential_cleaning_package: true,
           booking_reviews: {
             select: {
@@ -523,16 +499,9 @@ export class BookingService {
     ]);
 
     const formattedBookings = bookings.map((booking) => {
-      const packageData =
-        booking.general_cleaning_package ||
-        booking.deep_cleaning_package ||
-        booking.residential_cleaning_package;
+      const packageData = booking.residential_cleaning_package;
 
-      const serviceType = booking.general_cleaning_package
-        ? 'General Cleaning'
-        : booking.deep_cleaning_package
-          ? 'Deep Cleaning'
-          : 'Residential Cleaning';
+      const serviceType = booking.residential_cleaning_package?.title || 'Residential Cleaning';
 
       const slotTime = bookingSlotTimeMap[booking.slot];
 
@@ -590,8 +559,6 @@ export class BookingService {
       include: {
         maid: true,
         user: true,
-        general_cleaning_package: true,
-        deep_cleaning_package: true,
         residential_cleaning_package: true,
       },
     });
@@ -600,16 +567,9 @@ export class BookingService {
       throw new NotFoundException('Booking not found');
     }
 
-    const packageData =
-      booking.general_cleaning_package ||
-      booking.deep_cleaning_package ||
-      booking.residential_cleaning_package;
+    const packageData = booking.residential_cleaning_package;
 
-    const serviceType = booking.general_cleaning_package
-      ? 'General Cleaning'
-      : booking.deep_cleaning_package
-        ? 'Deep Cleaning'
-        : 'Residential Cleaning';
+    const serviceType = booking.residential_cleaning_package?.title || 'Residential Cleaning';
 
     const slotTime = bookingSlotTimeMap[booking.slot];
 
@@ -793,7 +753,7 @@ export class BookingService {
         },
       }),
       this.prisma.review.aggregate({
-        where: { maid_id: maidId },
+        where: { cleaner_id: maidId },
         _avg: { rating: true },
       }),
     ]);
@@ -918,8 +878,6 @@ export class BookingService {
       this.prisma.booking.findMany({
         where: whereClause,
         include: {
-          general_cleaning_package: true,
-          deep_cleaning_package: true,
           residential_cleaning_package: true,
           user: {
             select: {
@@ -942,15 +900,8 @@ export class BookingService {
     ]);
 
     const formattedBookings = bookings.map((booking) => {
-      const packageData =
-        booking.general_cleaning_package ||
-        booking.deep_cleaning_package ||
-        booking.residential_cleaning_package;
-      const serviceType = booking.general_cleaning_package
-        ? 'General Cleaning'
-        : booking.deep_cleaning_package
-          ? 'Deep Cleaning'
-          : 'Residential Cleaning';
+      const packageData = booking.residential_cleaning_package;
+      const serviceType = booking.residential_cleaning_package?.title || 'Residential Cleaning';
       const slotTime = bookingSlotTimeMap[booking.slot];
 
       return {
@@ -997,8 +948,6 @@ export class BookingService {
       where: { id: bookingId },
       include: {
         user: true,
-        general_cleaning_package: true,
-        deep_cleaning_package: true,
         residential_cleaning_package: true,
       },
     });
@@ -1007,15 +956,8 @@ export class BookingService {
       throw new NotFoundException('Booking not found');
     }
 
-    const packageData =
-      booking.general_cleaning_package ||
-      booking.deep_cleaning_package ||
-      booking.residential_cleaning_package;
-    const serviceType = booking.general_cleaning_package
-      ? 'General Cleaning'
-      : booking.deep_cleaning_package
-        ? 'Deep Cleaning'
-        : 'Residential Cleaning';
+    const packageData = booking.residential_cleaning_package;
+    const serviceType = booking.residential_cleaning_package?.title || 'Residential Cleaning';
     const slotTime = bookingSlotTimeMap[booking.slot];
 
     return {
@@ -1143,10 +1085,7 @@ export class BookingService {
               },
             },
           },
-          general_cleaning_package: true,
           residential_cleaning_package: true,
-
-          deep_cleaning_package: true,
           booking_reviews: {
             select: {
               rating: true,
@@ -1162,10 +1101,7 @@ export class BookingService {
 
     const formattedBookings = await Promise.all(
       bookings.map(async (booking) => {
-        const packageData =
-          booking.general_cleaning_package ||
-          booking.deep_cleaning_package ||
-          booking.residential_cleaning_package;
+        const packageData = booking.residential_cleaning_package;
         const slotTime = bookingSlotTimeMap[booking.slot];
 
         const aggregateRating = await this.prisma.review.aggregate({
@@ -1179,11 +1115,7 @@ export class BookingService {
 
         return {
           id: booking.id,
-          service: booking.general_cleaning_package
-            ? 'General Cleaning'
-            : booking.deep_cleaning_package
-              ? 'Deep Cleaning'
-              : 'Residential Cleaning',
+          service: booking.residential_cleaning_package?.title || 'Residential Cleaning',
           package: packageData?.packageType,
           package_image: packageData?.image
             ? TanvirStorage.url(
@@ -1343,17 +1275,9 @@ export class BookingService {
   // topic:﹝﹝﹝ danger part ﹞﹞﹞
   -----------------------------------------*/
   // create danger booking
-<<<<<<< HEAD
-  async createDangerBooking(
-    maidId: string, 
-    bookingId: string
-  ) {
-=======
   async createDangerBooking(maidId: string, bookingId: string,dangerDto:DangerDto) {
    
-     const {lat,lng} = dangerDto; 
-   
->>>>>>> 011035acf0b9aeb0f00a3b486d2c504bc81290dd
+     const {lat,lng} = dangerDto;
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
       select: {

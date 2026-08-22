@@ -41,8 +41,7 @@ export class DestinationService {
         id: true,
         maid_location: true,
         homeowner_location: true,
-        general_cleaning_package_id: true,
-        deep_cleaning_package_id: true,
+        residential_cleaning_package_id: true,
         slot: true,
         // 👈 homeowner relation
         user: {
@@ -85,11 +84,7 @@ export class DestinationService {
         destination: existingDestination,
         booking: {
           id: booking.id,
-          title: booking.general_cleaning_package_id
-            ? 'General Cleaning'
-            : booking.deep_cleaning_package_id
-              ? 'Deep Cleaning'
-              : 'Unknown Service',
+          title: booking.residential_cleaning_package_id ? 'Cleaning Service' : 'Unknown Service',
           slot: booking.slot,
         },
         homeowner: {
@@ -175,11 +170,7 @@ export class DestinationService {
       },
       booking: {
         id: booking.id,
-        title: booking.general_cleaning_package_id
-          ? 'General Cleaning'
-          : booking.deep_cleaning_package_id
-            ? 'Deep Cleaning'
-            : 'Unknown Service',
+        title: booking.residential_cleaning_package_id ? 'Cleaning Service' : 'Unknown Service',
         slot: booking.slot,
       },
       homeowner: {

@@ -60,7 +60,7 @@ export class ReviewService {
       data: {
         booking_id: booking.id,
         homeowner_id: homeownerId,
-        maid_id: booking.maid_id,
+        cleaner_id: booking.maid_id,
         rating: createReviewDto.rating,
         comment: createReviewDto.comment,
       },
@@ -94,7 +94,7 @@ export class ReviewService {
       select: {
         id: true,
         homeowner_id: true,
-        maid_id: true,
+        cleaner_id: true,
         booking_id: true,
       },
     });
@@ -117,7 +117,7 @@ export class ReviewService {
 
     await sendUserNotification({
       sender_id: homeownerId,
-      receiver_id: existingReview.maid_id,
+      receiver_id: existingReview.cleaner_id,
       text: `Review updated for booking ${existingReview.booking_id}`,
       type: 'review_booking',
       entity_id: existingReview.id,
@@ -164,7 +164,7 @@ export class ReviewService {
   async getReviewsForMaid(maidId: string) {
     const reviews = await this.prisma.review.findMany({
       where: {
-        maid_id: maidId,
+        cleaner_id: maidId,
       },
       include: {
         homeowner: {
@@ -176,12 +176,7 @@ export class ReviewService {
         },
         booking: {
           include: {
-            general_cleaning_package: {
-              select: {
-                title: true,
-              },
-            },
-            deep_cleaning_package: {
+            residential_cleaning_package: {
               select: {
                 title: true,
               },
@@ -196,8 +191,7 @@ export class ReviewService {
 
     const data = reviews.map((review) => {
       const serviceTitle =
-        review.booking.general_cleaning_package?.title ||
-        review.booking.deep_cleaning_package?.title ||
+        review.booking.residential_cleaning_package?.title ||
         'Cleaning Service';
 
       return {

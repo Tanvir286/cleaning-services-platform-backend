@@ -427,7 +427,7 @@ export class DashboardService {
               },
             },
 
-            maidReviews: {
+            cleanerReviews: {
               where: { deleted_at: null },
               select: {
                 rating: true,
@@ -459,7 +459,7 @@ export class DashboardService {
           .filter((b) => b.status === BookingStatus.COMPLETED)
           .reduce((sum, b) => sum + Number(b.total_price ?? 0), 0);
 
-        const ratings = cleaner.maidReviews
+        const ratings = cleaner.cleanerReviews
           .map((r) => r.rating)
           .filter((r): r is number => r !== null);
 
@@ -564,13 +564,7 @@ export class DashboardService {
                 name: true,
               },
             },
-            general_cleaning_package: {
-              select: {
-                title: true,
-                duration: true,
-              },
-            },
-            deep_cleaning_package: {
+            residential_cleaning_package: {
               select: {
                 title: true,
                 duration: true,
@@ -601,8 +595,7 @@ export class DashboardService {
       };
 
       const data = bookings.map((booking, index) => {
-        const serviceInfo =
-          booking.general_cleaning_package || booking.deep_cleaning_package;
+        const serviceInfo = booking.residential_cleaning_package;
         return {
           id: `BK - ${booking.id} `,
           homeowner_name: booking.user?.name || 'Unknown',
@@ -884,7 +877,7 @@ export class DashboardService {
             phone_number: true,
             avatar: true,
             location: true,
-            maidVerification: {
+            cleanerVerification: {
               orderBy: { created_at: 'desc' },
               take: 1,
               select: {
@@ -908,9 +901,9 @@ export class DashboardService {
         phone_number: item.phone_number,
         avatar: item.avatar,
         location: item.location || 'N/A',
-        applied_date: item.maidVerification[0]?.created_at || null,
-        status: item.maidVerification[0]?.status?.toLowerCase() || 'pending',
-        rejected_reason: item.maidVerification[0]?.rejected_reason || null,
+        applied_date: item.cleanerVerification[0]?.created_at || null,
+        status: item.cleanerVerification[0]?.status?.toLowerCase() || 'pending',
+        rejected_reason: item.cleanerVerification[0]?.rejected_reason || null,
       }));
 
       return {
@@ -945,7 +938,7 @@ export class DashboardService {
           city: true,
           state: true,
           zip_code: true,
-          maidVerification: {
+          cleanerVerification: {
             orderBy: { created_at: 'desc' },
             take: 1,
             select: {
@@ -969,7 +962,7 @@ export class DashboardService {
         };
       }
 
-      const verification = cleaner.maidVerification[0];
+      const verification = cleaner.cleanerVerification[0];
       if (!verification) {
         return {
           success: false,
@@ -1037,7 +1030,7 @@ export class DashboardService {
         };
       }
 
-      const verification = await this.prisma.maidVerification.findFirst({
+      const verification = await this.prisma.cleanerVerification.findFirst({
         where: {
           user_id: id,
         },
@@ -1053,7 +1046,7 @@ export class DashboardService {
         };
       }
 
-      const updatedVerification = await this.prisma.maidVerification.update({
+      const updatedVerification = await this.prisma.cleanerVerification.update({
         where: { id: verification.id },
         data: {
           status,

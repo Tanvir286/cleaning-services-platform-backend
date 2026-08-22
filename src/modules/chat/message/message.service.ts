@@ -370,7 +370,7 @@ export class MessageService {
       ? await this.prisma.review.aggregate({
           where:
             receiverParticipant?.user.type === 'MAID'
-              ? { maid_id: oppositeUserId }
+              ? { cleaner_id: oppositeUserId }
               : { homeowner_id: oppositeUserId },
           _avg: {
             rating: true,

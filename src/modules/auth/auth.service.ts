@@ -69,7 +69,7 @@ export class AuthService {
           id: userId,
         },
         data: {
-          active: !user.active,
+          active: user.active ? false : true,
         },
       });
 
@@ -257,6 +257,14 @@ export class AuthService {
           success: false,
           message: 'Please verify your email before logging in. Check your inbox for the verification code.',
           email_verified: false,
+        };
+      }
+
+      // Check if user is active
+      if (user?.active === false) {
+        return {
+          success: false,
+          message: 'Your account is deactivated. Please contact support.',
         };
       }
 
@@ -775,7 +783,7 @@ export class AuthService {
         };
       }
 
-      const existingVerification = await this.prisma.maidVerification.findFirst(
+      const existingVerification = await this.prisma.cleanerVerification.findFirst(
         {
           where: { user_id: userId },
           orderBy: { created_at: 'desc' },
@@ -824,7 +832,7 @@ export class AuthService {
         data.id_card_back = backFileName;
       }
 
-      await this.prisma.maidVerification.create({
+      await this.prisma.cleanerVerification.create({
         data: {
           user_id: userId,
           id_card_front: data.id_card_front,
@@ -860,7 +868,7 @@ export class AuthService {
   // get verification status
   async getVerificationStatus(userId: string) {
     try {
-      const verification = await this.prisma.maidVerification.findFirst({
+      const verification = await this.prisma.cleanerVerification.findFirst({
         where: { user_id: userId },
         orderBy: { created_at: 'desc' },
       });

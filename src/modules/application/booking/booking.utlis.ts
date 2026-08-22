@@ -57,34 +57,10 @@ export function formatBookingDate(date: Date) {
 
 // Function to resolve package details based on package ID
 export async function resolvePackage(prisma: PrismaService, packageId: string) {
-  const [generalPackage, deepPackage, residentialPackage] = await Promise.all([
-    prisma.generalCleaningPackage.findUnique({ where: { id: packageId } }),
-    prisma.deepCleaningPackage.findUnique({ where: { id: packageId } }),
-    prisma.residentialCleaningPackage.findUnique({ where: { id: packageId } }),
-  ]);
-
-  if (generalPackage) {
-    return {
-      general_cleaning_package_id: generalPackage.id,
-      deep_cleaning_package_id: null,
-      residential_cleaning_package_id: null,
-      total_price: generalPackage.price ? Number(generalPackage.price) : null,
-    };
-  }
-
-  if (deepPackage) {
-    return {
-      general_cleaning_package_id: null,
-      deep_cleaning_package_id: deepPackage.id,
-      residential_cleaning_package_id: null,
-      total_price: deepPackage.price ? Number(deepPackage.price) : null,
-    };
-  }
+  const residentialPackage = await prisma.residentialCleaningPackage.findUnique({ where: { id: packageId } });
 
   if (residentialPackage) {
     return {
-      general_cleaning_package_id: null,
-      deep_cleaning_package_id: null,
       residential_cleaning_package_id: residentialPackage.id,
       total_price: residentialPackage.price ? Number(residentialPackage.price) : null,
     };

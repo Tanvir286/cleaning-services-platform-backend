@@ -13,22 +13,6 @@ export class ServiceService {
 
   // helper
   private async findServiceById(id: string) {
-    const general = await this.prisma.generalCleaningPackage.findUnique({
-      where: { id },
-    });
-
-    if (general) {
-      return { service: general, type: 'GENERAL' };
-    }
-
-    const deep = await this.prisma.deepCleaningPackage.findUnique({
-      where: { id },
-    });
-
-    if (deep) {
-      return { service: deep, type: 'DEEP' };
-    }
-
     const residential = await this.prisma.residentialCleaningPackage.findUnique({
       where: { id },
     });
@@ -60,26 +44,12 @@ export class ServiceService {
 
     let service;
 
-    if (serviceType === 'GENERAL_CLEANING') {
-      service = await this.prisma.generalCleaningPackage.create({
+    if (serviceType) {
+      service = await this.prisma.residentialCleaningPackage.create({
         data: {
           title,
-          serviceType,
-          packageType,
-          image: fileName,
-          description,
-          duration,
-          price,
-        },
-      });
-    }
-
-    if (serviceType === 'DEEP_CLEANING') {
-      service = await this.prisma.deepCleaningPackage.create({
-        data: {
-          title,
-          serviceType,
-          packageType,
+          serviceType: 'RESIDENTIAL_CLEANING',
+          packageType: packageType as any,
           image: fileName,
           description,
           duration,
@@ -130,15 +100,9 @@ export class ServiceService {
     if (image) {
       // delete old image
       const oldService =
-        (await this.prisma.generalCleaningPackage.findUnique({
+        await this.prisma.residentialCleaningPackage.findUnique({
           where: { id },
-        })) ||
-        (await this.prisma.deepCleaningPackage.findUnique({
-          where: { id },
-        })) ||
-        (await this.prisma.residentialCleaningPackage.findUnique({
-          where: { id },
-        }));
+        });
            
 
       if (oldService?.image) {
@@ -158,22 +122,10 @@ export class ServiceService {
 
     let updatedService;
 
-    if (type === 'GENERAL') {
-      updatedService = await this.prisma.generalCleaningPackage.update({
-        where: { id },
-        data,
-      });
-    } else if (type === 'DEEP') {
-      updatedService = await this.prisma.deepCleaningPackage.update({
-        where: { id },
-        data,
-      });
-    } else if (type === 'RESIDENTIAL') {
-      updatedService = await this.prisma.residentialCleaningPackage.update({
-        where: { id },
-        data,
-      });
-    }
+    updatedService = await this.prisma.residentialCleaningPackage.update({
+      where: { id },
+      data,
+    });
 
     return {
       success: true,
@@ -186,7 +138,7 @@ export class ServiceService {
 
   // get all general-cleaning_package services
   async getAllGeneralCleaningPackages() {
-    const services = await this.prisma.generalCleaningPackage.findMany({
+    const services = await this.prisma.residentialCleaningPackage.findMany({
       select: {
         id: true,
         title: true,
@@ -219,7 +171,7 @@ export class ServiceService {
 
   // get all deep_cleaning_package services
   async getAllDeepCleaningPackage() {
-    const services = await this.prisma.deepCleaningPackage.findMany({
+    const services = await this.prisma.residentialCleaningPackage.findMany({
       select: {
         id: true,
         title: true,

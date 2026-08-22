@@ -124,7 +124,6 @@ export class SeedCommand extends CommandRunner {
       };
 
       await this.prisma.user.upsert({
-<<<<<<< HEAD
         where: { email: 'cleaner@gmail.com' },
         update: {},
         create: {
@@ -136,11 +135,6 @@ export class SeedCommand extends CommandRunner {
           bio: 'Experienced cleaning professional',
           email_verified_at: new Date(),
         },
-=======
-        where: { email: 'maid@gmail.com' },
-        update: maidData,
-        create: maidData,
->>>>>>> 011035acf0b9aeb0f00a3b486d2c504bc81290dd
       });
 
       // HOMEOWNER
@@ -268,8 +262,4 @@ export class SeedCommand extends CommandRunner {
 
     await this.prisma.$disconnect();
   }
-<<<<<<< HEAD
 } 
-=======
-}
->>>>>>> 011035acf0b9aeb0f00a3b486d2c504bc81290dd

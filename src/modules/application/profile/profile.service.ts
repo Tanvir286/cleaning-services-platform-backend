@@ -57,7 +57,7 @@ export class ProfileService {
         latitude: true,
         longitude: true,
         experience_years: true,
-        maidVerification: {
+        cleanerVerification: {
           orderBy: { created_at: 'desc' },
           take: 1,
           select: {
@@ -77,7 +77,7 @@ export class ProfileService {
     const reviewWhere =
       user.type === 'HOMEOWNER'
         ? { homeowner_id: user.id }
-        : { maid_id: user.id };
+        : { cleaner_id: user.id };
 
     const [
       reviewAggregate,
@@ -126,13 +126,7 @@ export class ProfileService {
           status: 'COMPLETED',
         },
         include: {
-          general_cleaning_package: {
-            select: {
-              title: true,
-              image: true,
-            },
-          },
-          deep_cleaning_package: {
+          residential_cleaning_package: {
             select: {
               title: true,
               image: true,
@@ -168,7 +162,7 @@ export class ProfileService {
         : 0;
 
     const recent_jobs = recentJobs.map((job) => {
-      const pkg = job.general_cleaning_package || job.deep_cleaning_package;
+      const pkg = job.residential_cleaning_package;
 
       return {
         id: job.id,
@@ -188,7 +182,7 @@ export class ProfileService {
         id: user.id,
         name: user.name,
         email: user.email,
-        verification_status: user.maidVerification?.[0]?.status === 'VERIFIED',
+        verification_status: user.cleanerVerification?.[0]?.status === 'VERIFIED',
         avater_url: user.avatar
           ? TanvirStorage.url(appConfig().storageUrl.avatar + '/' + user.avatar)
           : null,
@@ -198,7 +192,7 @@ export class ProfileService {
         service_type: user.service_type,
         experience_years: user.experience_years,
         jobs_done: jobsDone,
-        maid_verification: user.maidVerification[0],
+        maid_verification: user.cleanerVerification[0],
         total_earnings,
         repeat_client_rate,
         last_active: '2 hour',
@@ -226,7 +220,7 @@ export class ProfileService {
         about_me: true,
         service_type: true,
         experience_years: true,
-        maidVerification: {
+        cleanerVerification: {
           orderBy: { created_at: 'desc' },
           take: 1,
           select: {
@@ -248,7 +242,7 @@ export class ProfileService {
     const reviewWhere =
       user.type === 'HOMEOWNER'
         ? { homeowner_id: user.id }
-        : { maid_id: user.id };
+        : { cleaner_id: user.id };
 
     const [
       reviewAggregate,
@@ -297,13 +291,7 @@ export class ProfileService {
           status: 'COMPLETED',
         },
         include: {
-          general_cleaning_package: {
-            select: {
-              title: true,
-              image: true,
-            },
-          },
-          deep_cleaning_package: {
+          residential_cleaning_package: {
             select: {
               title: true,
               image: true,
@@ -340,7 +328,7 @@ export class ProfileService {
         : 0;
 
     const recent_jobs = recentJobs.map((job) => {
-      const pkg = job.general_cleaning_package || job.deep_cleaning_package;
+      const pkg = job.residential_cleaning_package;
 
       return {
         id: job.id,
@@ -368,9 +356,9 @@ export class ProfileService {
         phone_number: user.phone_number,
         service_type: user.service_type,
         experience_years: user.experience_years,
-        verification_status: user.maidVerification?.[0]?.status || 'PENDING',
-        verified_at: user.maidVerification?.[0]?.verified_at || null,
-        rejected_reason: user.maidVerification?.[0]?.rejected_reason || null,
+        verification_status: user.cleanerVerification?.[0]?.status || 'PENDING',
+        verified_at: user.cleanerVerification?.[0]?.verified_at || null,
+        rejected_reason: user.cleanerVerification?.[0]?.rejected_reason || null,
         jobs_done: jobsDone,
         total_earnings,
         repeat_client_rate,
@@ -488,7 +476,7 @@ export class ProfileService {
 
     const reviews = await this.prisma.review.findMany({
       where: {
-        maid_id: maidId,
+        cleaner_id: maidId,
       },
       include: {
         homeowner: {
@@ -500,12 +488,7 @@ export class ProfileService {
         },
         booking: {
           include: {
-            general_cleaning_package: {
-              select: {
-                title: true,
-              },
-            },
-            deep_cleaning_package: {
+            residential_cleaning_package: {
               select: {
                 title: true,
               },
@@ -520,8 +503,7 @@ export class ProfileService {
 
     const data = reviews.map((review) => {
       const serviceTitle =
-        review.booking.general_cleaning_package?.title ||
-        review.booking.deep_cleaning_package?.title ||
+        review.booking.residential_cleaning_package?.title ||
         'Cleaning Service';
 
       return {
@@ -715,7 +697,6 @@ export class ProfileService {
     };
   }
 
-  // get saved location
   async getSavedLocations(userId: string) {
     const locations = await this.prisma.location.findMany({
       where: {
