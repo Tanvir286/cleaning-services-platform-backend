@@ -46,6 +46,7 @@ enum UserType {
 enum ServiceType {
   GENERAL_CLEANING
   DEEP_CLEANING
+  RESIDENTIAL_CLEANING
 }
 
 model User {
