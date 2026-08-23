@@ -1115,6 +1115,12 @@ export class AuthService {
     });
 
     if (user) {
+      if (user.active === false) {
+        throw new UnauthorizedException(
+          'Your account is deactivated. Please contact support.',
+        );
+      }
+
       const _isValidPassword = await this.userRepository.validatePassword({
         email: email,
         password: _password,
