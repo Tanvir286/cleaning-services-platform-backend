@@ -53,6 +53,7 @@ export class AuthService {
         },
         select: {
           id: true,
+          email: true,
           active: true,
         },
       });
@@ -61,6 +62,14 @@ export class AuthService {
         return {
           success: false,
           message: 'User not found',
+        };
+      }
+
+      const seedEmails = ['admin@gmail.com', 'maid@gmail.com', 'homeowner@gmail.com'];
+      if (seedEmails.includes(user.email)) {
+        return {
+          success: false,
+          message: 'Seed users cannot be deactivated',
         };
       }
 
