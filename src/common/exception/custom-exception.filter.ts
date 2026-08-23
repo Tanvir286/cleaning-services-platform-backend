@@ -13,13 +13,20 @@ export class CustomExceptionFilter implements ExceptionFilter {
 
     const exceptionResponse = exception.getResponse();
 
-    const message =
-      typeof exceptionResponse === 'string'
-        ? exceptionResponse
-        : (exceptionResponse as any).message || 'An error occurred';
+    let message = 'An error occurred';
+    let additionalData = {};
+
+    if (typeof exceptionResponse === 'string') {
+      message = exceptionResponse;
+    } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+      const { message: resMessage, statusCode, error, ...rest } = exceptionResponse as any;
+      message = resMessage || message;
+      additionalData = rest;
+    }
 
     response.status(status).json({
       success: false,
+      ...additionalData,
       message,
     });
   }
