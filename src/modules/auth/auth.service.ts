@@ -264,6 +264,7 @@ export class AuthService {
       if (user?.active === false) {
         return {
           success: false,
+          deactive: true,
           message: 'Your account is deactivated. Please contact support.',
         };
       }
@@ -293,6 +294,7 @@ export class AuthService {
 
       return {
         success: true,
+        deactive: false,
         message: 'Logged in successfully',
         authorization: {
           type: 'bearer',
