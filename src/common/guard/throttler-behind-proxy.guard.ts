@@ -8,3 +8,6 @@ export class ThrottlerBehindProxyGuard extends ThrottlerGuard {
     return req.ips.length ? req.ips[0] : req.ip; // individualize IP extraction to meet your own needs
   }
 }
+
+
+
