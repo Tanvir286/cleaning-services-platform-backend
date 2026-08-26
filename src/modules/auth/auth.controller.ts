@@ -38,8 +38,23 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
 
-  // active deactive
+  // *delete account
+  @UseGuards(JwtAuthGuard)
+  @Post('delete-account')
+  async deleteAccount(@Req() req: Request) {
+    try {
+      const user_id = req.user.userId;
+      const response = await this.authService.deleteAccount(user_id);
+      return response;
+    } catch (error: any) {
+      return {
+        success: false,
+        message: 'Failed to delete account',
+      };
+    }
+  }
 
+  // active deactive
   @UseGuards(JwtAuthGuard)
   @Get('active-deactive')
   async activeDeactive(@Req() req: Request) {

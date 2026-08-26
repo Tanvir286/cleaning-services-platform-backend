@@ -43,6 +43,46 @@ export class AuthService {
     return TanvirStorage.url(appConfig().storageUrl.avatar + '/' + avatar);
   }
 
+  // delete account
+  async deleteAccount(userId: string) {
+    try {
+      const user = await this.prisma.user.findFirst({
+        where: { id: userId },
+        select: { id: true, email: true },
+      });
+
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+        };
+      }
+
+      const seedEmails = ['admin@gmail.com', 'maid@gmail.com', 'homeowner@gmail.com'];
+      if (seedEmails.includes(user.email)) {
+        return {
+          success: false,
+          message: 'Seed users cannot be deleted',
+        };
+      }
+
+      await this.prisma.user.delete({
+        where: { id: userId },
+      });
+
+      return {
+        success: true,
+        message: 'Account deleted successfully',
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+
   //active deactive
   async activeDeactive(userId: string) {
 
