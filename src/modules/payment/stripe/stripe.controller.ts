@@ -84,7 +84,6 @@ export class StripeController {
               rawStatus: event.type,
             });
           }
-
           break; 
         }
         case 'checkout.session.completed': {
@@ -99,20 +98,15 @@ export class StripeController {
               rawStatus: event.type,
             });
           }
-
           break;
         }
         case 'payment_intent.canceled':
-          
           break;
         case 'payment_intent.requires_action':
-         
           break;
         case 'payout.paid':
-         
           break;
         case 'payout.failed':
-          
           break;
         default:
           break;
