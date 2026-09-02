@@ -543,7 +543,7 @@ export class StripePayment {
   }
   // end ACH
 
-  static handleWebhook(rawBody: string, sig: string | string[]): stripe.Event {
+  static handleWebhook(rawBody: string | Buffer, sig: string | string[]): stripe.Event {
     const event = Stripe.webhooks.constructEvent(
       rawBody,
       sig,

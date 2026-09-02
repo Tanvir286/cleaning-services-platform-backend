@@ -1,4 +1,11 @@
- import { Controller, Post, Req, Headers, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Req,
+  Headers,
+  BadRequestException,
+  RawBodyRequest,
+} from '@nestjs/common';
 import { StripeService } from './stripe.service';
 import { Request } from 'express';
 import { TransactionRepository } from '../../../common/repository/transaction/transaction.repository';
@@ -24,48 +31,81 @@ export class StripeController {
     paidAmount?: number;
     rawStatus?: string;
   }) {
-    if (!transactionId) return;
+    if (!transactionId) {
+      console.warn('[Stripe Webhook] finalizeDepositTransaction: No transactionId provided');
+      return;
+    }
 
     const transaction = await this.prisma.paymentTransaction.findUnique({
       where: { id: transactionId },
     });
 
-    if (!transaction || transaction.status !== 'pending') return;
+    if (!transaction) {
+      console.warn(`[Stripe Webhook] Transaction not found for ID: ${transactionId}`);
+      return;
+    }
 
-    await this.prisma.paymentTransaction.update({
-      where: { id: transactionId },
-      data: {
-        status: 'succeeded',
-        raw_status: rawStatus,
-        reference_number: referenceNumber ?? transaction.reference_number,
-      },
-    });
+    if (transaction.status !== 'pending') {
+      console.log(
+        `[Stripe Webhook] Transaction ${transactionId} already processed (status: ${transaction.status}). Skipping.`,
+      );
+      return;
+    }
 
-    if (transaction.user_id) {
-      await this.prisma.user.update({
-        where: { id: transaction.user_id },
+    const finalPaidAmount = paidAmount ?? Number(transaction.amount ?? 0);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.paymentTransaction.update({
+        where: { id: transactionId },
         data: {
-          balance: {
-            increment: paidAmount ?? Number(transaction.amount ?? 0),
-          },
+          status: 'succeeded',
+          raw_status: rawStatus,
+          paid_amount: finalPaidAmount,
+          reference_number: referenceNumber ?? transaction.reference_number,
         },
       });
-    }
-  }
 
+      if (transaction.user_id) {
+        const user = await tx.user.findUnique({
+          where: { id: transaction.user_id },
+          select: { balance: true },
+        });
+
+        const currentBalance = Number(user?.balance ?? 0);
+
+        await tx.user.update({
+          where: { id: transaction.user_id },
+          data: {
+            balance: currentBalance + finalPaidAmount,
+          },
+        });
+      }
+    });
+
+    console.log(
+      `[Stripe Webhook] Successfully finalized deposit for transaction: ${transactionId}, amount: ${finalPaidAmount}`,
+    );
+  }
 
   @Post('webhook')
   async handleWebhook(
     @Headers('stripe-signature') signature: string,
-    @Req() req: Request,
+    @Req() req: RawBodyRequest<Request>,
   ) {
     try {
+      const payload = req.rawBody ?? (req as any).body;
+      if (!payload) {
+        throw new Error('Raw body payload is missing');
+      }
 
-      const payload = req.rawBody.toString();
       const event = await this.stripeService.handleWebhook(payload, signature);
 
-      if (!event.data || !event.data.object) return { received: true };
-     
+      if (!event || !event.data || !event.data.object) {
+        return { received: true };
+      }
+
+      console.log(`[Stripe Webhook] Received event: ${event.type}`);
+
       // Handle events
       switch (event.type) {
         case 'customer.created':
@@ -80,11 +120,13 @@ export class StripeController {
             await this.finalizeDepositTransaction({
               transactionId: meta.transaction_id,
               referenceNumber: paymentIntent.id,
-              paidAmount: paymentIntent.amount_received ? paymentIntent.amount_received / 100 : undefined,
+              paidAmount: paymentIntent.amount_received
+                ? paymentIntent.amount_received / 100
+                : undefined,
               rawStatus: event.type,
             });
           }
-          break; 
+          break;
         }
         case 'checkout.session.completed': {
           const session = event.data.object as Stripe.Checkout.Session;
@@ -94,7 +136,9 @@ export class StripeController {
             await this.finalizeDepositTransaction({
               transactionId: meta.transaction_id,
               referenceNumber: session.id,
-              paidAmount: session.amount_total ? session.amount_total / 100 : undefined,
+              paidAmount: session.amount_total
+                ? session.amount_total / 100
+                : undefined,
               rawStatus: event.type,
             });
           }
@@ -113,9 +157,9 @@ export class StripeController {
       }
 
       return { received: true };
-    } catch (error) {
-      console.error('Webhook error', error);
-      return { received: false };
+    } catch (error: any) {
+      console.error('[Stripe Webhook Error]', error?.message || error);
+      throw new BadRequestException(`Webhook Error: ${error?.message || 'Unknown error'}`);
     }
   }
 }

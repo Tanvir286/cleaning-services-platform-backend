@@ -30,7 +30,14 @@ async function bootstrap() {
   app.use(helmet());
 
   // Global body size limit – 50 MB (same as multer fileSize limit)
-  app.use(express.json({ limit: '50mb' }));
+  app.use(
+    express.json({
+      limit: '50mb',
+      verify: (req: any, _res, buf) => {
+        req.rawBody = buf;
+      },
+    }),
+  );
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
  
 
