@@ -16,7 +16,17 @@ const STRIPE_WEBHOOK_SECRET = appConfig().payment.stripe.webhook_secret;
 export class StripePayment {
 
   private static getCheckoutRedirectBaseUrl() {
-    return appConfig().app.url;
+    const configuredUrl =
+      appConfig().app.url ||
+      process.env.APP_URL ||
+      process.env.BASE_URL;
+
+    if (configuredUrl && configuredUrl.trim()) {
+      return configuredUrl.trim().replace(/\/+$/, '');
+    }
+
+    const port = appConfig().app.port || process.env.PORT || 5000;
+    return `http://localhost:${port}`;
   }
 
 

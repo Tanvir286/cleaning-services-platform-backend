@@ -2,10 +2,13 @@ export default () => ({
   app: {
     name: process.env.APP_NAME,
     key: process.env.APP_KEY,
-    url: process.env.APP_URL,
-    client_app_url: process.env.CLIENT_APP_URL,
+    url:
+      process.env.APP_URL?.trim() ||
+      process.env.BASE_URL?.trim() ||
+      `http://localhost:${process.env.PORT || 5000}`,
+    client_app_url: process.env.CLIENT_APP_URL?.trim() || 'http://localhost:3000',
     host: process.env.HOST?.trim() || '0.0.0.0',
-    port: parseInt(process.env.PORT ?? '4000', 10) || 4000,
+    port: parseInt(process.env.PORT ?? '5000', 10) || 5000,
   },
 
   fileSystems: {

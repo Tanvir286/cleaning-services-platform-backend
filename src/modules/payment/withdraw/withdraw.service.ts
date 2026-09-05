@@ -88,10 +88,12 @@ export class WithdrawService {
         },
       };
     } catch (error: any) {
-      console.error('Onboarding link error:', error);
+      console.error('Onboarding link error:', error?.raw ?? error?.message ?? error);
+      const message =
+        error?.raw?.message || error?.message || 'Failed to create onboarding link';
       throw new HttpException(
-        'Failed to create onboarding link',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        message,
+        error?.statusCode || HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }

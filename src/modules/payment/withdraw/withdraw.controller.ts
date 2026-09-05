@@ -50,7 +50,7 @@ export class WithdrawController {
   async getOnboardingLink(@Param('accountId') accountId: string) {
     try {
       const result = await this.withdrawService.createOnboardingLink(accountId);
-      const baseUrl = appConfig().app.url;
+      const baseUrl = (appConfig().app.url || 'http://localhost:5000').replace(/\/+$/, '');
       const successUrl = `${baseUrl}/withdraw/onboarding/success`;
       const refreshUrl = `${baseUrl}/withdraw/onboarding/refresh`;
 
