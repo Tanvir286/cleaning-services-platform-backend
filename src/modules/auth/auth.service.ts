@@ -81,8 +81,6 @@ export class AuthService {
       };
     }
   }
-
-
   //active deactive
   async activeDeactive(userId: string) {
 
@@ -137,7 +135,6 @@ export class AuthService {
     
 
   }
-
 
   // me
   async me(userId: string) {

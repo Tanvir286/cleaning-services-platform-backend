@@ -222,7 +222,7 @@ export class SeedCommand extends CommandRunner {
             serviceType: 'RESIDENTIAL_CLEANING',
             price: 149,
             description:
-              'Weekly or bi-weekly maintenance cleaning.Apartments.Small homes.Homes already in good condition.Wipe countertops.Clean exterior of appliances.Clean sink and faucet.Spot clean cabinet exteriors.Sweep and mop floors.Clean and sanitize toilet.Clean sink and vanity.Clean mirrors.Clean shower/tub surfaces.Sweep and mop floors.Dust accessible surfaces.Make beds (if linens are provided).Vacuum carpets/rugs.Sweep and mop hard floors.Empty trash bins.Eco-friendly cleaning products.General dusting.Floor cleaning.Trash removal. ',
+              'Weekly or bi-weekly maintenance cleaning.Apartments.Small homes.Homes already in good condition.Wipe countertops.Clean exterior of appliances.Clean sink and faucet.Spot clean cabinet exteriors.Sweep and mop floors.Clean and sanitize toilet.Clean sink and vanity.Clean mirrors.Clean shower/tub surfaces.Dust accessible surfaces.Make beds (if linens are provided).Vacuum carpets/rugs.Sweep and mop hard floors.Empty trash bins.Eco-friendly cleaning products.General dusting.Floor cleaning.Trash removal. ',
             duration: '2-3 Hours',
           },
           {
@@ -230,7 +230,7 @@ export class SeedCommand extends CommandRunner {
             serviceType: 'RESIDENTIAL_CLEANING',
             price: 229,
             description:
-              '  First-time customers. Seasonal cleaning. Homes needing extra attention. Includes Everything in EcoRefresh Clean. Detailed appliance exterior cleanings. Clean microwave interior. Detailed backsplash cleaning. Cabinet front detailing. Deep scrub shower/tub. Detailed tile cleaning. Detailed fixture cleaning. Detailed dusting of baseboards. Window sill cleaning. Door frame spot cleaning. Light switch and doorknob sanitizing. Baseboard cleaning. Ceiling fan dusting. Window sill cleaning. Extra attention to high-touch surfaces.',
+              'First-time customers. Seasonal cleaning. Homes needing extra attention. Includes Everything in EcoRefresh Clean. Detailed appliance exterior cleanings. Clean microwave interior. Detailed backsplash cleaning. Cabinet front detailing. Deep scrub shower/tub. Detailed tile cleaning. Detailed fixture cleaning. Detailed dusting of baseboards. Window sill cleaning. Door frame spot cleaning. Light switch and doorknob sanitizing. Baseboard cleaning. Ceiling fan dusting. Extra attention to high-touch surfaces.',
             duration: '3-5 Hours',
           },
           {
@@ -238,7 +238,7 @@ export class SeedCommand extends CommandRunner {
             serviceType: 'RESIDENTIAL_CLEANING',
             price: 399,
             description:
-              'Luxury homes. Special occasions. Annual deep cleaning, Homes requiring top-tier service, Includes Everything in EcoRestore Deep Clean, Interior refrigerator cleaning, Interior oven cleaning, Interior cabinet wipe-down (accessible areas), Detailed grout attention, Premium fixture detailing, Detailed baseboard cleaning, Detailed door and trim cleaning, Interior window cleaning (reachable areas), Wall spot cleaning, High-detail dusting throughout, Comprehensive home refresh, Priority scheduling, Enhanced quality-control inspection',
+              'Luxury homes. Special occasions. Annual deep cleaning, Homes requiring top-tier service, Includes Everything in EcoRestore Deep Clean, Interior refrigerator cleaning, Interior oven cleaning, Interior cabinet wipe-down (accessible areas), Detailed grout attention, Premium fixture detailing, Detailed baseboard cleaning, Detailed door and trim cleaning, Interior window cleaning (reachable areas), Wall spot cleaning, High-detail dusting throughout, Comprehensive home refresh, Priority scheduling, Enhanced quality-control inspection.',
             duration: '5-7 Hours',
           },
         ],
