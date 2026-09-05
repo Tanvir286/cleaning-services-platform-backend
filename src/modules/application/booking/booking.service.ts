@@ -12,9 +12,13 @@ import {
   bookingSlotTimeMap,
   checkBalance,
   checkCommission,
+  checkPackageDeatils,
   checkSlotAvailability,
+  doIntervalsOverlap,
   findAddress,
   formatBookingDate,
+  getSlotTimeInterval,
+  getSoltWithTitle,
   resolvePackage,
   uploadBookingImages,
   validateMaid,
@@ -83,7 +87,12 @@ export class BookingService {
       lng = homeowner.longitude;
     }
 
-    if (lat === null || lat === undefined || lng === null || lng === undefined) {
+    if (
+      lat === null ||
+      lat === undefined ||
+      lng === null ||
+      lng === undefined
+    ) {
       throw new BadRequestException(
         'Homeowner latitude and longitude are missing. Please provide latitude & longitude in query parameters or update your profile location in database.',
       );
@@ -185,7 +194,7 @@ export class BookingService {
   }
 
   // available maids list
-  async getMaidSlots(maidId: string, month: number, year: number) {
+  async getMaidSlots(maidId: string, month: number, year: number, packageId: string) {
     const maid = await this.prisma.user.findUnique({
       where: { id: maidId },
     });
@@ -195,6 +204,12 @@ export class BookingService {
     if (maid.type !== 'MAID') {
       throw new BadRequestException('Selected user is not a maid');
     }
+
+    const { title } = await checkPackageDeatils(this.prisma, packageId);
+
+    const slotConfig = getSoltWithTitle(title);
+
+    if (!slotConfig) throw new BadRequestException('No slots available for this package');
 
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0);
@@ -206,32 +221,46 @@ export class BookingService {
           gte: startDate,
           lte: endDate,
         },
-        status: { not: 'CANCELLED' },
+        status: { notIn: ['CANCELLED', 'REJECTED'] },
       },
       select: {
         booking_date: true,
         slot: true,
+        residential_cleaning_package: {
+          select: {
+            title: true,
+          },
+        },
       },
     });
 
-    const bookedMap = new Map<string, Set<string>>();
+    const bookedIntervalsMap = new Map<
+      string,
+      Array<{ start: number; end: number; slot: string }>
+    >();
 
     for (const booking of bookings) {
       const dateKey = booking.booking_date.toLocaleDateString('en-CA');
 
-      if (!bookedMap.has(dateKey)) {
-        bookedMap.set(dateKey, new Set());
+      if (!bookedIntervalsMap.has(dateKey)) {
+        bookedIntervalsMap.set(dateKey, []);
       }
 
-      bookedMap.get(dateKey).add(booking.slot);
-    }
+      const interval = getSlotTimeInterval(
+        booking.residential_cleaning_package?.title,
+        booking.slot,
+      );
 
-    const slotTimeMap = {
-      A: { start: '8:00', end: '12:00' },
-      B: { start: '12:00', end: '04:00' },
-      C: { start: '04:00', end: '08:00' },
-      D: { start: '08:00', end: '12:00' },
-    };
+      if (interval) {
+        bookedIntervalsMap
+          .get(dateKey)
+          .push({ ...interval, slot: booking.slot });
+      } else {
+        bookedIntervalsMap
+          .get(dateKey)
+          .push({ start: -1, end: -1, slot: booking.slot });
+      }
+    }
 
     const totalDays = endDate.getDate();
     const dates = [];
@@ -240,13 +269,34 @@ export class BookingService {
       const date = new Date(year, month - 1, day);
       const dateKey = date.toLocaleDateString('en-CA');
 
-      const bookedSlots = bookedMap.get(dateKey) || new Set();
+      const bookedList = bookedIntervalsMap.get(dateKey) || [];
 
-      const slots = Object.entries(slotTimeMap).map(([slot, time]) => ({
-        slot,
-        label: `${time.start} - ${time.end}`,
-        is_available: !bookedSlots.has(slot),
-      }));
+      const slots = slotConfig.slot.map((item) => {
+        const itemInterval = getSlotTimeInterval(title, item.slot);
+
+        let isBooked = false;
+        if (itemInterval) {
+          isBooked = bookedList.some((b) => {
+            if (b.start === -1) {
+              return b.slot === item.slot;
+            }
+            return doIntervalsOverlap(
+              itemInterval.start,
+              itemInterval.end,
+              b.start,
+              b.end,
+            );
+          });
+        } else {
+          isBooked = bookedList.some((b) => b.slot === item.slot);
+        }
+
+        return {
+          slot: item.slot,
+          label: `${item.start} - ${item.end}`,
+          is_available: !isBooked && item.status === 'available',
+        };
+      });
 
       const availableCount = slots.filter((s) => s.is_available).length;
 
@@ -317,7 +367,7 @@ export class BookingService {
 
     await validateMaid(this.prisma, maid_id, userId);
 
-    await checkSlotAvailability(this.prisma, maid_id, parsedDate, slot);
+    await checkSlotAvailability(this.prisma, maid_id, parsedDate, slot, package_id);
 
     const balance = await checkBalance(this.prisma, userId);
 
@@ -427,10 +477,6 @@ export class BookingService {
       entity_id: booking.id,
     });
 
-   
-
-
-
     const formatPackage = (
       pkg: typeof booking.residential_cleaning_package,
     ) => {
@@ -462,10 +508,7 @@ export class BookingService {
   // get homeowner bookings list
   // * (pending,upcoming,completed,cancelled) status filter
   // service type,package type,price,address,booking date,slot
-  async getAllBookingsWithStatus(
-    userId: string, 
-    query: PaginationstausDto
-  ) {
+  async getAllBookingsWithStatus(userId: string, query: PaginationstausDto) {
     const { page, perPage, bookingStatus } = query;
 
     const skip = (page - 1) * perPage;
@@ -501,7 +544,8 @@ export class BookingService {
     const formattedBookings = bookings.map((booking) => {
       const packageData = booking.residential_cleaning_package;
 
-      const serviceType = booking.residential_cleaning_package?.title || 'Residential Cleaning';
+      const serviceType =
+        booking.residential_cleaning_package?.title || 'Residential Cleaning';
 
       const slotTime = bookingSlotTimeMap[booking.slot];
 
@@ -569,7 +613,8 @@ export class BookingService {
 
     const packageData = booking.residential_cleaning_package;
 
-    const serviceType = booking.residential_cleaning_package?.title || 'Residential Cleaning';
+    const serviceType =
+      booking.residential_cleaning_package?.title || 'Residential Cleaning';
 
     const slotTime = bookingSlotTimeMap[booking.slot];
 
@@ -626,12 +671,14 @@ export class BookingService {
         },
         status: booking.status,
         cancle_reason: booking.cancle_reason ?? null,
-        before_photos_url: (booking.before_photos as string[])?.map((fileName) =>
-          TanvirStorage.url(`${appConfig().storageUrl.booking}/${fileName}`),
-        ) ?? [],
-        after_photos_url: (booking.after_photos as string[])?.map((fileName) =>
-          TanvirStorage.url(`${appConfig().storageUrl.booking}/${fileName}`),
-        ) ?? [],
+        before_photos_url:
+          (booking.before_photos as string[])?.map((fileName) =>
+            TanvirStorage.url(`${appConfig().storageUrl.booking}/${fileName}`),
+          ) ?? [],
+        after_photos_url:
+          (booking.after_photos as string[])?.map((fileName) =>
+            TanvirStorage.url(`${appConfig().storageUrl.booking}/${fileName}`),
+          ) ?? [],
       },
     };
   }
@@ -901,7 +948,8 @@ export class BookingService {
 
     const formattedBookings = bookings.map((booking) => {
       const packageData = booking.residential_cleaning_package;
-      const serviceType = booking.residential_cleaning_package?.title || 'Residential Cleaning';
+      const serviceType =
+        booking.residential_cleaning_package?.title || 'Residential Cleaning';
       const slotTime = bookingSlotTimeMap[booking.slot];
 
       return {
@@ -957,7 +1005,8 @@ export class BookingService {
     }
 
     const packageData = booking.residential_cleaning_package;
-    const serviceType = booking.residential_cleaning_package?.title || 'Residential Cleaning';
+    const serviceType =
+      booking.residential_cleaning_package?.title || 'Residential Cleaning';
     const slotTime = bookingSlotTimeMap[booking.slot];
 
     return {
@@ -1004,12 +1053,14 @@ export class BookingService {
           longitude: booking.user.longitude,
           phone: booking.user.phone_number,
         },
-        before_photos_url: (booking.before_photos as string[])?.map((fileName) =>
-          TanvirStorage.url(`${appConfig().storageUrl.booking}/${fileName}`),
-        ) ?? [],
-        after_photos_url: (booking.after_photos as string[])?.map((fileName) =>
-          TanvirStorage.url(`${appConfig().storageUrl.booking}/${fileName}`),
-        ) ?? [],
+        before_photos_url:
+          (booking.before_photos as string[])?.map((fileName) =>
+            TanvirStorage.url(`${appConfig().storageUrl.booking}/${fileName}`),
+          ) ?? [],
+        after_photos_url:
+          (booking.after_photos as string[])?.map((fileName) =>
+            TanvirStorage.url(`${appConfig().storageUrl.booking}/${fileName}`),
+          ) ?? [],
       },
     };
   }
@@ -1061,10 +1112,7 @@ export class BookingService {
   }
 
   //  booking status (pending, upcoming, completed, cancelled)
-  async getBookingsByStatusForMaid(
-    maidId: string, 
-    query: PaginationstausDto
-  ) {
+  async getBookingsByStatusForMaid(maidId: string, query: PaginationstausDto) {
     const { page, perPage, bookingStatus } = query;
     const skip = (page - 1) * perPage;
 
@@ -1115,7 +1163,9 @@ export class BookingService {
 
         return {
           id: booking.id,
-          service: booking.residential_cleaning_package?.title || 'Residential Cleaning',
+          service:
+            booking.residential_cleaning_package?.title ||
+            'Residential Cleaning',
           package: packageData?.packageType,
           package_image: packageData?.image
             ? TanvirStorage.url(
@@ -1275,16 +1325,19 @@ export class BookingService {
   // topic:﹝﹝﹝ danger part ﹞﹞﹞
   -----------------------------------------*/
   // create danger booking
-  async createDangerBooking(maidId: string, bookingId: string,dangerDto:DangerDto) {
-   
-     const {lat,lng} = dangerDto;
+  async createDangerBooking(
+    maidId: string,
+    bookingId: string,
+    dangerDto: DangerDto,
+  ) {
+    const { lat, lng } = dangerDto;
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
       select: {
         id: true,
         maid_id: true,
         booking_date: true,
-      }
+      },
     });
 
     if (!booking) {
@@ -1326,8 +1379,7 @@ export class BookingService {
       message: 'Danger alert created successfully',
       data: {
         danger,
-        maid_live_location: {lat,lng},
-     
+        maid_live_location: { lat, lng },
       },
     };
   }

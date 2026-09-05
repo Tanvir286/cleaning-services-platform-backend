@@ -62,8 +62,9 @@ export class BookingController {
     @Param('maidId') maidId: string,
     @Query('month') month: string,
     @Query('year') year: string,
+    @Query('packageId') packageId: string,
   ) {
-    return this.bookingService.getMaidSlots(maidId, +month, +year);
+    return this.bookingService.getMaidSlots(maidId, +month, +year, packageId);
   }
 
   /*-------------------------------------------------
