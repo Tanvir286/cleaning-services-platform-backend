@@ -36,7 +36,7 @@ export async function findAddress(
 
 
 // Define the default time slots for bookings without a recognized package.
-export const bookingSlotTimeMap: Record<BookingSlot, { start: string; end: string }> = {
+export const defaultBookingSlots: Record<BookingSlot, { start: string; end: string }> = {
   A: { start: '08:00am', end: '12:00pm' },
   B: { start: '12:00pm', end: '04:00pm' },
   C: { start: '04:00pm', end: '08:00pm' },
@@ -75,9 +75,9 @@ export function getSoltWithTitle(title?: string | null) {
       status: 'available',
       slot: [
         { slot: 'A', start: '08:00am', end: '11:00am', status: 'available' },
-        { slot: 'B', start: '11:00am', end: '02:00pm', status: 'available' },
-        { slot: 'C', start: '02:00pm', end: '05:00pm', status: 'available' },
-        { slot: 'D', start: '05:00pm', end: '08:00pm', status: 'available' },
+        { slot: 'B', start: '11:30am', end: '02:30pm', status: 'available' },
+        { slot: 'C', start: '03:00pm', end: '06:00pm', status: 'available' },
+        { slot: 'D', start: '06:30pm', end: '09:30pm', status: 'available' },
       ],
     };
   } else if (
@@ -91,8 +91,8 @@ export function getSoltWithTitle(title?: string | null) {
       status: 'available',
       slot: [
         { slot: 'A', start: '08:00am', end: '01:00pm', status: 'available' },
-        { slot: 'B', start: '01:00pm', end: '06:00pm', status: 'available' },
-        { slot: 'C', start: '06:00pm', end: '11:00pm', status: 'available' },
+        { slot: 'B', start: '01:30pm', end: '06:30pm', status: 'available' },
+        { slot: 'C', start: '07:00pm', end: '12:00pm', status: 'available' },
       ],
     };
   } else if (
@@ -106,7 +106,7 @@ export function getSoltWithTitle(title?: string | null) {
       status: 'available',
       slot: [
         { slot: 'A', start: '08:00am', end: '03:00pm', status: 'available' },
-        { slot: 'B', start: '03:00pm', end: '10:00pm', status: 'available' },
+        { slot: 'B', start: '03:30pm', end: '10:30pm', status: 'available' },
       ],
     };
   }
@@ -137,7 +137,7 @@ export function getSlotTimeInterval(
   }
 
   // Fallback to default slot mapping
-  const fallback = bookingSlotTimeMap[slot as BookingSlot];
+  const fallback = defaultBookingSlots[slot as BookingSlot];
   if (fallback) {
     const start = timeStringToMinutes(fallback.start);
     let end = timeStringToMinutes(fallback.end);
@@ -162,7 +162,7 @@ export function getSlotTimeRange(
 
   return packageSlot
     ? { start: packageSlot.start, end: packageSlot.end }
-    : bookingSlotTimeMap[slot as BookingSlot] ?? null;
+    : defaultBookingSlots[slot as BookingSlot] ?? null;
 }
 
 export function getBookingScheduledStart(

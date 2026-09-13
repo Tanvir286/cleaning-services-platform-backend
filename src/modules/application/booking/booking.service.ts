@@ -9,7 +9,6 @@ import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { PaginationstausDto } from './dto/params-booking.dto';
 import {
-  bookingSlotTimeMap,
   checkBalance,
   checkCommission,
   checkPackageDeatils,
@@ -1253,10 +1252,17 @@ export class BookingService {
       throw new BadRequestException('Only confirmed bookings can be started');
     }
 
+    const packageData = booking.residential_cleaning_package_id
+      ? await this.prisma.residentialCleaningPackage.findUnique({
+          where: { id: booking.residential_cleaning_package_id },
+          select: { title: true },
+        })
+      : null;
     const now = new Date();
     const scheduledStart = getBookingScheduledStart(
       booking.booking_date,
       booking.slot,
+      packageData?.title,
     );
     const earliestStart = new Date(scheduledStart.getTime() - 30 * 60 * 1000);
     const latestStart = new Date(scheduledStart.getTime() + 30 * 60 * 1000);
