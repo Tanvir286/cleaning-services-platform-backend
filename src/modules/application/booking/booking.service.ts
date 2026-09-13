@@ -18,6 +18,8 @@ import {
   findAddress,
   formatBookingDate,
   getSlotTimeInterval,
+  getSlotTimeRange,
+  getBookingScheduledStart,
   getSoltWithTitle,
   resolvePackage,
   uploadBookingImages,
@@ -194,7 +196,12 @@ export class BookingService {
   }
 
   // available maids list
-  async getMaidSlots(maidId: string, month: number, year: number, packageId: string) {
+  async getMaidSlots(
+    maidId: string,
+    month: number,
+    year: number,
+    packageId: string,
+  ) {
     const maid = await this.prisma.user.findUnique({
       where: { id: maidId },
     });
@@ -209,7 +216,8 @@ export class BookingService {
 
     const slotConfig = getSoltWithTitle(title);
 
-    if (!slotConfig) throw new BadRequestException('No slots available for this package');
+    if (!slotConfig)
+      throw new BadRequestException('No slots available for this package');
 
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0);
@@ -367,7 +375,13 @@ export class BookingService {
 
     await validateMaid(this.prisma, maid_id, userId);
 
-    await checkSlotAvailability(this.prisma, maid_id, parsedDate, slot, package_id);
+    await checkSlotAvailability(
+      this.prisma,
+      maid_id,
+      parsedDate,
+      slot,
+      package_id,
+    );
 
     const balance = await checkBalance(this.prisma, userId);
 
@@ -547,7 +561,7 @@ export class BookingService {
       const serviceType =
         booking.residential_cleaning_package?.title || 'Residential Cleaning';
 
-      const slotTime = bookingSlotTimeMap[booking.slot];
+      const slotTime = getSlotTimeRange(packageData?.title, booking.slot);
 
       const hasReview = booking.booking_reviews.length > 0;
 
@@ -616,7 +630,7 @@ export class BookingService {
     const serviceType =
       booking.residential_cleaning_package?.title || 'Residential Cleaning';
 
-    const slotTime = bookingSlotTimeMap[booking.slot];
+    const slotTime = getSlotTimeRange(packageData?.title, booking.slot);
 
     return {
       success: true,
@@ -950,7 +964,7 @@ export class BookingService {
       const packageData = booking.residential_cleaning_package;
       const serviceType =
         booking.residential_cleaning_package?.title || 'Residential Cleaning';
-      const slotTime = bookingSlotTimeMap[booking.slot];
+      const slotTime = getSlotTimeRange(packageData?.title, booking.slot);
 
       return {
         id: booking.id,
@@ -1007,7 +1021,7 @@ export class BookingService {
     const packageData = booking.residential_cleaning_package;
     const serviceType =
       booking.residential_cleaning_package?.title || 'Residential Cleaning';
-    const slotTime = bookingSlotTimeMap[booking.slot];
+    const slotTime = getSlotTimeRange(packageData?.title, booking.slot);
 
     return {
       success: true,
@@ -1150,7 +1164,7 @@ export class BookingService {
     const formattedBookings = await Promise.all(
       bookings.map(async (booking) => {
         const packageData = booking.residential_cleaning_package;
-        const slotTime = bookingSlotTimeMap[booking.slot];
+        const slotTime = getSlotTimeRange(packageData?.title, booking.slot);
 
         const aggregateRating = await this.prisma.review.aggregate({
           where: { homeowner_id: booking.user.id },
@@ -1239,9 +1253,23 @@ export class BookingService {
       throw new BadRequestException('Only confirmed bookings can be started');
     }
 
+    const now = new Date();
+    const scheduledStart = getBookingScheduledStart(
+      booking.booking_date,
+      booking.slot,
+    );
+    const earliestStart = new Date(scheduledStart.getTime() - 30 * 60 * 1000);
+    const latestStart = new Date(scheduledStart.getTime() + 30 * 60 * 1000);
+
+    if (now < earliestStart || now > latestStart) {
+      throw new BadRequestException(
+        'Booking can only be started from 30 minutes before until 30 minutes after the scheduled start time',
+      );
+    }
+
     const updatedBooking = await this.prisma.booking.update({
       where: { id: bookingId },
-      data: { status, start_time: new Date() },
+      data: { status, start_time: now },
     });
 
     await sendAdminNotification({

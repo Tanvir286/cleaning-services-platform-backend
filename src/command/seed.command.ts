@@ -191,7 +191,6 @@ export class SeedCommand extends CommandRunner {
           },
         });
       }
-
       console.log('✅ Commission seeding completed');
     }
 
@@ -243,7 +242,6 @@ export class SeedCommand extends CommandRunner {
           },
         ],
       });
-
       console.log('✅ Packages seeding completed');
     }
 

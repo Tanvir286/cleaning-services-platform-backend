@@ -35,7 +35,7 @@ export async function findAddress(
 }
 
 
-// Define the time slots for booking
+// Define the default time slots for bookings without a recognized package.
 export const bookingSlotTimeMap: Record<BookingSlot, { start: string; end: string }> = {
   A: { start: '08:00am', end: '12:00pm' },
   B: { start: '12:00pm', end: '04:00pm' },
@@ -148,6 +148,42 @@ export function getSlotTimeInterval(
   }
 
   return null;
+}
+
+export function getSlotTimeRange(
+  packageTitle?: string | null,
+  slot?: string | null,
+): { start: string; end: string } | null {
+  if (!slot) return null;
+
+  const packageSlot = packageTitle
+    ? getSoltWithTitle(packageTitle)?.slot.find((item) => item.slot === slot)
+    : null;
+
+  return packageSlot
+    ? { start: packageSlot.start, end: packageSlot.end }
+    : bookingSlotTimeMap[slot as BookingSlot] ?? null;
+}
+
+export function getBookingScheduledStart(
+  bookingDate: Date,
+  slot: string,
+  packageTitle?: string | null,
+): Date {
+  const interval = getSlotTimeInterval(packageTitle, slot);
+  if (!interval) {
+    throw new BadRequestException('Invalid booking time slot');
+  }
+
+  const scheduledStart = new Date(
+    Date.UTC(
+      bookingDate.getUTCFullYear(),
+      bookingDate.getUTCMonth(),
+      bookingDate.getUTCDate(),
+    ),
+  );
+  scheduledStart.setUTCMinutes(interval.start);
+  return scheduledStart;
 }
 
 // Check whether two time intervals overlap: [start1, end1) and [start2, end2)
