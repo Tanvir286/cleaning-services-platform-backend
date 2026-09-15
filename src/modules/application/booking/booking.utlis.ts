@@ -176,13 +176,11 @@ export function getBookingScheduledStart(
   }
 
   const scheduledStart = new Date(
-    Date.UTC(
-      bookingDate.getUTCFullYear(),
-      bookingDate.getUTCMonth(),
-      bookingDate.getUTCDate(),
-    ),
+    bookingDate.getUTCFullYear(),
+    bookingDate.getUTCMonth(),
+    bookingDate.getUTCDate(),
   );
-  scheduledStart.setUTCMinutes(interval.start);
+  scheduledStart.setHours(0, interval.start, 0, 0);
   return scheduledStart;
 }
 
