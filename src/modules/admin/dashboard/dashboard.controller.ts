@@ -8,7 +8,9 @@ import {
   Delete,
   UseGuards,
   Query,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { DashboardService } from './dashboard.service';
 import { CreateDashboardDto } from './dto/create-dashboard.dto';
 import { UpdateDashboardDto } from './dto/update-dashboard.dto';
@@ -22,12 +24,17 @@ import { DangerStatusDto } from './dto/danger-status.dto';
 import { JobStatusDto } from './dto/job-status.dto';
 import { UpdateCommissionDto } from './dto/update-commission.dto';
 import { Public } from 'src/common/decorator/public.decorator';
+import { HomeownerActionsDto } from './dto/homeowner-actions.dto';
+import { CleanerActionsDto } from './dto/cleaner-actions.dto';
+import { AssignBookingCleanerDto } from './dto/assign-booking-cleaner.dto';
+import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
+import { UpdateBookingPaymentStatusDto } from './dto/update-booking-payment-status.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.ADMIN)
 @Controller('dashboard')
 export class DashboardController {
-  constructor(private readonly dashboardService: DashboardService) {}
+  constructor(private readonly dashboardService: DashboardService) { }
 
   // dashborad Overview
   @Get('overview')
@@ -79,6 +86,12 @@ export class DashboardController {
     return this.dashboardService.getAllHomeowners(paginationDto);
   }
 
+  // Homer owner actions
+  @Patch('/homeowners/actions')
+  async homeownersActions(@Query() query: HomeownerActionsDto) {
+    return this.dashboardService.homeownersActions(query)
+  }
+
   /*--------------------------------------------
             Clearner LIST WITH DETAILS
   --------------------------------------------*/
@@ -91,14 +104,60 @@ export class DashboardController {
     return this.dashboardService.getAllCleaners(paginationDto);
   }
 
+  // Cleaner actions
+  // Homer owner actions
+  @Patch('/cleaners/actions')
+  async cleanerActions(@Query() query: CleanerActionsDto) {
+    return this.dashboardService.cleanerActions(query)
+  }
+
   /*--------------------------------------------
             Booking  WITH DETAILS
   --------------------------------------------*/
 
   // get all bookings with details
-  @Get('bookings/details')
+  @Get('bookings')
   async getAllBookings(@Query() paginationDto: PaginationDto) {
     return this.dashboardService.getAllBookings(paginationDto);
+  }
+
+  @Get('bookings/cleaners')
+  async getBookingCleaners() {
+    return this.dashboardService.getBookingCleaners();
+  }
+
+  @Get('bookings/:id')
+  async getBookingDetails(@Param('id') id: string) {
+    return this.dashboardService.getBookingDetails(id);
+  }
+
+  @Patch('bookings/:id/cleaner')
+  async assignBookingCleaner(
+    @Param('id') id: string,
+    @Body() dto: AssignBookingCleanerDto,
+  ) {
+    return this.dashboardService.assignBookingCleaner(id, dto);
+  }
+
+  @Patch('bookings/:id/status')
+  async updateBookingStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateBookingStatusDto,
+  ) {
+    return this.dashboardService.updateBookingStatus(id, dto);
+  }
+
+  @Patch('bookings/:id/payment-status')
+  async updateBookingPaymentStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateBookingPaymentStatusDto,
+    @Req() req: Request,
+  ) {
+    return this.dashboardService.updateBookingPaymentStatus(
+      id,
+      dto,
+      req.user?.userId,
+    );
   }
 
   /*--------------------------------------------

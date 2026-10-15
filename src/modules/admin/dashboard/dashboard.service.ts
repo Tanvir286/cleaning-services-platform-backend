@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { BookingStatus, UserType } from '@prisma/client';
+import { BookingStatus, PaymentStatus, UserStatus, UserType } from '@prisma/client';
 import { PaginationDto, paginateResponse } from 'src/common/pagination';
 import appConfig from 'src/config/app.config';
 import { TanvirStorage } from 'src/common/lib/Disk/TanvirStorage';
@@ -9,10 +9,15 @@ import { DangerStatusDto } from './dto/danger-status.dto';
 import { JobStatusDto } from './dto/job-status.dto';
 import { UpdateCommissionDto } from './dto/update-commission.dto';
 import { sendAdminNotification } from 'src/common/utils/notification.util';
+import { HomeownerActionsDto } from './dto/homeowner-actions.dto';
+import { CleanerActionsDto } from './dto/cleaner-actions.dto';
+import { AssignBookingCleanerDto } from './dto/assign-booking-cleaner.dto';
+import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
+import { UpdateBookingPaymentStatusDto } from './dto/update-booking-payment-status.dto';
 
 @Injectable()
 export class DashboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   // dashboard overview (only revenew)
   async getOverview() {
@@ -153,31 +158,31 @@ export class DashboardService {
           created_at: notification.created_at,
           sender: notification.sender
             ? {
-                id: notification.sender.id,
-                name: notification.sender.name,
-                avatar: notification.sender.avatar
-                  ? TanvirStorage.url(
-                      appConfig().storageUrl.avatar +
-                        '/' +
-                        notification.sender.avatar,
-                    )
-                  : null,
-                type: notification.sender.type,
-              }
+              id: notification.sender.id,
+              name: notification.sender.name,
+              avatar: notification.sender.avatar
+                ? TanvirStorage.url(
+                  appConfig().storageUrl.avatar +
+                  '/' +
+                  notification.sender.avatar,
+                )
+                : null,
+              type: notification.sender.type,
+            }
             : null,
           receiver: notification.receiver
             ? {
-                id: notification.receiver.id,
-                name: notification.receiver.name,
-                avatar: notification.receiver.avatar
-                  ? TanvirStorage.url(
-                      appConfig().storageUrl.avatar +
-                        '/' +
-                        notification.receiver.avatar,
-                    )
-                  : null,
-                type: notification.receiver.type,
-              }
+              id: notification.receiver.id,
+              name: notification.receiver.name,
+              avatar: notification.receiver.avatar
+                ? TanvirStorage.url(
+                  appConfig().storageUrl.avatar +
+                  '/' +
+                  notification.receiver.avatar,
+                )
+                : null,
+              type: notification.receiver.type,
+            }
             : null,
         };
       });
@@ -349,11 +354,11 @@ export class DashboardService {
           name: homeowner.name,
           email: homeowner.email,
           phone_number: homeowner.phone_number,
-          avatar: homeowner.avatar,
+          avatar: homeowner.avatar ? '/public/storage/avatar/' + homeowner.avatar : null,
           location: homeowner.location,
           bookings: totalBookings,
           total_spent: totalSpent,
-          status: homeowner.status === 1 ? 'active' : 'inactive',
+          status: homeowner.status,
           joined_at: homeowner.created_at,
         };
       });
@@ -362,6 +367,32 @@ export class DashboardService {
         success: true,
         message: `Homeowners retrieved successfully`,
         data: paginateResponse(data, total, page, perPage),
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+  // Homeowner actions
+  async homeownersActions(query: HomeownerActionsDto) {
+    try {
+      await this.prisma.user.update({
+        where: {
+          id: query.userId,
+          type: 'HOMEOWNER'
+        },
+        data: {
+          status: query.status
+        }
+      });
+
+      return {
+        success: true,
+        message: `User Status update successfully`,
+        data: null,
       };
     } catch (error: any) {
       return {
@@ -466,24 +497,16 @@ export class DashboardService {
         const avgRating =
           ratings.length > 0
             ? Math.round(
-                (ratings.reduce((sum, r) => sum + r, 0) / ratings.length) * 10,
-              ) / 10
+              (ratings.reduce((sum, r) => sum + r, 0) / ratings.length) * 10,
+            ) / 10
             : 0;
-
-        // status: availability
-        let statusLabel: 'active' | 'inactive';
-        if (cleaner.status !== 1) {
-          statusLabel = 'inactive';
-        } else {
-          statusLabel = 'active';
-        }
 
         return {
           id: cleaner.id,
           name: cleaner.name,
           email: cleaner.email,
           phone_number: cleaner.phone_number,
-          avatar: cleaner.avatar,
+          avatar: cleaner.avatar ? '/public/storage/avatar/' + cleaner.avatar : null,
           joined_at: cleaner.created_at,
           rating: avgRating,
           total_reviews: ratings.length,
@@ -493,7 +516,7 @@ export class DashboardService {
             completion_rate: completionRate,
           },
           earnings: totalEarnings,
-          status: statusLabel,
+          status: cleaner.status,
         };
       });
 
@@ -501,6 +524,42 @@ export class DashboardService {
         success: true,
         message: `Cleaners retrieved successfully`,
         data: paginateResponse(data, total, page, perPage),
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+
+  // Homeowner actions
+  async cleanerActions(query: CleanerActionsDto) {
+    try {
+      const cleaner = await this.prisma.user.findUnique({
+        where: {
+          id: query.userId,
+        },
+      });
+
+      if (!cleaner) {
+        throw new NotFoundException('Cleaner not found');
+      }
+
+      await this.prisma.user.update({
+        where: {
+          id: query.userId,
+        },
+        data: {
+          status: query.status
+        }
+      });
+
+      return {
+        success: true,
+        message: `User Status update successfully`,
+        data: null,
       };
     } catch (error: any) {
       return {
@@ -598,6 +657,7 @@ export class DashboardService {
         const serviceInfo = booking.residential_cleaning_package;
         return {
           id: `BK - ${booking.id} `,
+          booking_id: booking.id,
           homeowner_name: booking.user?.name || 'Unknown',
           cleaner_name: booking.maid?.name || 'Unknown',
           booking_date: booking.booking_date,
@@ -623,6 +683,197 @@ export class DashboardService {
         message: error.message,
       };
     }
+  }
+
+  async getBookingCleaners() {
+    const cleaners = await this.prisma.user.findMany({
+      where: {
+        type: UserType.MAID,
+        status: UserStatus.ACTIVE,
+        active: true,
+        deleted_at: null,
+      },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, avatar: true },
+    });
+
+    return { success: true, data: cleaners };
+  }
+
+  async getBookingDetails(id: string) {
+    const booking = await this.prisma.booking.findFirst({
+      where: { id, deleted_at: null },
+      select: {
+        id: true,
+        created_at: true,
+        updated_at: true,
+        booking_date: true,
+        slot: true,
+        start_time: true,
+        end_time: true,
+        status: true,
+        payment_status: true,
+        total_price: true,
+        revenue: true,
+        cancle_reason: true,
+        homeowner_location: true,
+        maid_location: true,
+        homeowner_latitude: true,
+        homeowner_longitude: true,
+        maid_latitude: true,
+        maid_longitude: true,
+        before_photos: true,
+        after_photos: true,
+        maid_note: true,
+        user: {
+          select: { id: true, name: true, email: true, phone_number: true, location: true },
+        },
+        maid: {
+          select: { id: true, name: true, email: true, phone_number: true, avatar: true },
+        },
+        residential_cleaning_package: {
+          select: { id: true, title: true, duration: true, price: true, serviceType: true },
+        },
+        payment_transaction: { orderBy: { created_at: 'desc' } },
+        payment_status_history: { orderBy: { created_at: 'desc' } },
+      },
+    });
+
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    return {
+      success: true,
+      message: 'Booking details retrieved successfully',
+      data: {
+        ...booking,
+        total_price: Number(booking.total_price ?? 0),
+        revenue: booking.revenue === null ? null : Number(booking.revenue),
+        residential_cleaning_package: booking.residential_cleaning_package
+          ? {
+            ...booking.residential_cleaning_package,
+            price: booking.residential_cleaning_package.price === null
+              ? null
+              : Number(booking.residential_cleaning_package.price),
+          }
+          : null,
+        payment: {
+          status: booking.payment_status,
+          transactions: booking.payment_transaction.map((transaction) => ({
+            ...transaction,
+            amount: transaction.amount === null ? null : Number(transaction.amount),
+            paid_amount: transaction.paid_amount === null ? null : Number(transaction.paid_amount),
+          })),
+          status_history: booking.payment_status_history,
+        },
+      },
+    };
+  }
+
+  async assignBookingCleaner(id: string, dto: AssignBookingCleanerDto) {
+    const booking = await this.prisma.booking.findFirst({
+      where: { id, deleted_at: null },
+      select: { id: true, status: true },
+    });
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+    if (
+      booking.status === BookingStatus.COMPLETED ||
+      booking.status === BookingStatus.REJECTED ||
+      booking.status === BookingStatus.CANCELLED
+    ) {
+      throw new ConflictException('Cleaner cannot be changed for a closed booking');
+    }
+
+    const cleaner = await this.prisma.user.findFirst({
+      where: {
+        id: dto.cleaner_id,
+        type: UserType.MAID,
+        status: UserStatus.ACTIVE,
+        active: true,
+        deleted_at: null,
+      },
+      select: { id: true },
+    });
+    if (!cleaner) {
+      throw new NotFoundException('Active cleaner not found');
+    }
+
+    try {
+      const updated = await this.prisma.booking.update({
+        where: { id },
+        data: { maid_id: cleaner.id },
+        select: { id: true, maid_id: true, updated_at: true },
+      });
+      return { success: true, message: 'Cleaner assigned successfully', data: updated };
+    } catch (error) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException('Cleaner already has a booking in this time slot');
+      }
+      throw error;
+    }
+  }
+
+  async updateBookingStatus(id: string, dto: UpdateBookingStatusDto) {
+    const booking = await this.prisma.booking.findFirst({
+      where: { id, deleted_at: null },
+      select: { id: true },
+    });
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    const updated = await this.prisma.booking.update({
+      where: { id },
+      data: { status: dto.status },
+      select: { id: true, status: true, updated_at: true },
+    });
+    return { success: true, message: 'Booking status updated successfully', data: updated };
+  }
+
+  async updateBookingPaymentStatus(
+    id: string,
+    dto: UpdateBookingPaymentStatusDto,
+    changedBy?: string,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findFirst({
+        where: { id, deleted_at: null },
+        select: { id: true, payment_status: true },
+      });
+      if (!booking) {
+        throw new NotFoundException('Booking not found');
+      }
+
+      const updated = await tx.booking.update({
+        where: { id },
+        data: { payment_status: dto.status },
+        select: { id: true, payment_status: true, updated_at: true },
+      });
+      if (booking.payment_status !== dto.status) {
+        await tx.bookingPaymentStatusHistory.create({
+          data: {
+            booking_id: id,
+            previous_status: booking.payment_status,
+            status: dto.status,
+            changed_by: changedBy,
+          },
+        });
+      }
+
+      return {
+        success: true,
+        message: 'Booking payment status updated successfully',
+        data: updated,
+      };
+    });
   }
 
   /*--------------------------------------------
@@ -699,7 +950,7 @@ export class DashboardService {
 
   // approve or reject job approval by id
   async updateJobApprovalById(
-    id: string, 
+    id: string,
     updateDto: JobStatusDto
   ) {
     try {
@@ -818,11 +1069,11 @@ export class DashboardService {
       });
 
       await sendAdminNotification({
-          sender_id: 'system',
-          text: `Booking ${existingBooking.id} has been rejected and the amount has been refunded to your balance.`,
-          type: 'reject_job_submission',
-          entity_id: existingBooking.id,
-        });
+        sender_id: 'system',
+        text: `Booking ${existingBooking.id} has been rejected and the amount has been refunded to your balance.`,
+        type: 'reject_job_submission',
+        entity_id: existingBooking.id,
+      });
 
       return {
         success: true,
@@ -839,6 +1090,32 @@ export class DashboardService {
   /*--------------------------------------------
      Cleaner Requests with approve part 
   --------------------------------------------*/
+
+  private isCleanerApplicationComplete(
+    cleaner: {
+      name: string | null;
+      email: string | null;
+      phone_number: string | null;
+      location: string | null;
+      address: string | null;
+    },
+    verification?: {
+      id_card_front: string | null;
+      id_card_back: string | null;
+      resume: string | null;
+    } | null,
+  ) {
+    return [
+      cleaner.name,
+      cleaner.email,
+      cleaner.phone_number,
+      cleaner.location,
+      cleaner.address,
+      verification?.id_card_front,
+      verification?.id_card_back,
+      verification?.resume,
+    ].every((value) => typeof value === 'string' && value.trim().length > 0);
+  }
 
   // get all cleaner requests with details
   async getAllCleanerRequests(
@@ -877,6 +1154,7 @@ export class DashboardService {
             phone_number: true,
             avatar: true,
             location: true,
+            address: true,
             cleanerVerification: {
               orderBy: { created_at: 'desc' },
               take: 1,
@@ -894,17 +1172,26 @@ export class DashboardService {
         this.prisma.user.count({ where: whereCondition }),
       ]);
 
-      const data = requests.map((item) => ({
-        id: item.id,
-        name: item.name,
-        email: item.email,
-        phone_number: item.phone_number,
-        avatar: item.avatar,
-        location: item.location || 'N/A',
-        applied_date: item.cleanerVerification[0]?.created_at || null,
-        status: item.cleanerVerification[0]?.status?.toLowerCase() || 'pending',
-        rejected_reason: item.cleanerVerification[0]?.rejected_reason || null,
-      }));
+      const data = requests.map((item) => {
+        const verification = item.cleanerVerification[0] || null;
+        const isComplete = this.isCleanerApplicationComplete(item, verification);
+
+        return {
+          id: item.id,
+          name: item.name,
+          email: item.email,
+          phone_number: item.phone_number,
+          avatar: item.avatar ? '/public/storage/avatar/' + item.avatar : null,
+          location: item.location || 'N/A',
+          address: item.address,
+          applied_date: verification?.created_at || null,
+          status:
+            verification?.status === 'PENDING' && !isComplete
+              ? 'incomplete'
+              : verification?.status?.toLowerCase() || 'incomplete',
+          rejected_reason: verification?.rejected_reason || null,
+        };
+      });
 
       return {
         success: true,
@@ -962,43 +1249,42 @@ export class DashboardService {
         };
       }
 
-      const verification = cleaner.cleanerVerification[0];
-      if (!verification) {
-        return {
-          success: false,
-          message: 'No verification submission found for this cleaner',
-        };
-      }
+      const verification = cleaner.cleanerVerification[0] || null;
+      const isComplete = this.isCleanerApplicationComplete(cleaner, verification);
 
       const data = {
         id: cleaner.id,
-        verification_id: verification.id,
+        verification_id: verification?.id || null,
         name: cleaner.name,
         email: cleaner.email,
         phone_number: cleaner.phone_number,
         location: cleaner.location || 'N/A',
-        status: verification.status?.toLowerCase() || 'pending',
-        rejected_reason: verification.rejected_reason || null,
-        id_card_front_url: verification.id_card_front
+        address: cleaner.address,
+        status:
+          verification?.status === 'PENDING' && !isComplete
+            ? 'draft'
+            : verification?.status?.toLowerCase() || 'draft',
+        rejected_reason: verification?.rejected_reason || null,
+        id_card_front_url: verification?.id_card_front
           ? TanvirStorage.url(
-              appConfig().storageUrl.maidverification +
-                '/' +
-                verification.id_card_front,
-            )
+            appConfig().storageUrl.maidverification +
+            '/' +
+            verification.id_card_front,
+          )
           : null,
-        id_card_back_url: verification.id_card_back
+        id_card_back_url: verification?.id_card_back
           ? TanvirStorage.url(
-              appConfig().storageUrl.maidverification +
-                '/' +
-                verification.id_card_back,
-            )
+            appConfig().storageUrl.maidverification +
+            '/' +
+            verification.id_card_back,
+          )
           : null,
-        resume_url: verification.resume
+        resume_url: verification?.resume
           ? TanvirStorage.url(
-              appConfig().storageUrl.maidResume +
-                '/' +
-                verification.resume,
-            )
+            appConfig().storageUrl.maidResume +
+            '/' +
+            verification.resume,
+          )
           : null,
       };
 
@@ -1017,7 +1303,7 @@ export class DashboardService {
 
   // approve or reject cleaner request by id
   async updateCleanerRequestById(
-    id: string, 
+    id: string,
     updateDto: CleanerStatusDto
   ) {
     try {
@@ -1134,6 +1420,7 @@ export class DashboardService {
       const data = dangerRequests.map((danger) => ({
         id: danger.id,
         name: danger.user?.name,
+        avatar: danger.user.avatar ? '/public/storage/avatar/' + danger.user.avatar : null,
         joint_at: danger.user?.created_at,
 
         applied_date: danger.created_at,
@@ -1215,7 +1502,7 @@ export class DashboardService {
 
   // approve or reject danger request by id
   async updateDangerRequestById(
-    id: string, 
+    id: string,
     updateDto: DangerStatusDto
   ) {
     try {
